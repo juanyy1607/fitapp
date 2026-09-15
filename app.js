@@ -370,15 +370,19 @@
       dispositivo: corrida.dispositivo, instalada: corrida.instalada, conRed: corrida.conRed
     });
 
+    // A partir de acá los temporizadores usan `idc` y no `corrida`: cuando disparan, la
+    // corrida ya puede haber terminado y `corrida` valer null.
+    var idc = corrida.idCorrida;
+
     // --- ESTRATEGIA A: setTimeout en la página
     if (estrategias.indexOf('A') !== -1) {
       corrida.timeoutA = setTimeout(function () {
         var ahora = Date.now();
         notificar('Descanso terminado', 'Estrategia A (página) — desvío ' + (ahora - venceEn) + ' ms',
-                  { idCorrida: corrida.idCorrida, estrategia: 'A' })
+                  { idCorrida: idc, estrategia: 'A' })
           .then(function (via) {
             anotar({
-              idCorrida: corrida.idCorrida, tipo: 'disparo', estrategia: 'A',
+              idCorrida: idc, tipo: 'disparo', estrategia: 'A',
               via: 'setTimeout en la página → ' + via,
               venceEn: venceEn, disparoEn: ahora, disparoEnIso: new Date(ahora).toISOString(),
               desvioMs: ahora - venceEn, brechaJsMs: medirBrechaJS()
@@ -411,7 +415,7 @@
       corrida.timeoutC = setTimeout(function () {
         var ahora = Date.now();
         beepInmediato();
-        anotar({ idCorrida: corrida.idCorrida, tipo: 'disparo', estrategia: 'C',
+        anotar({ idCorrida: idc, tipo: 'disparo', estrategia: 'C',
                  via: 'setTimeout de respaldo (beep inmediato)',
                  venceEn: venceEn, disparoEn: ahora, desvioMs: ahora - venceEn,
                  brechaJsMs: medirBrechaJS() });
@@ -457,6 +461,36 @@
     refrescarLog();
   }
 
+  /*
+   * Cierra la corrida cuando el contador llega a cero con la app abierta (escenarios 1 y 3).
+   *
+   * Si la corrida termina mientras NO estabas mirando, el cierre lo hace en cambio
+   * revisarCorridaPendiente() cuando volvés. Los dos caminos terminan igual: sueltan los
+   * recursos y te muestran el cartel de "¿te avisó?".
+   */
+  function finalizar() {
+    if (!corrida) return;
+    var id = corrida.idCorrida;
+    var brecha = medirBrechaJS();
+
+    soltarWakeLock();
+    pararAudioSilencioso();
+    localStorage.removeItem(CLAVE_ACTIVA);
+
+    anotar({ idCorrida: id, tipo: 'fin', venceEn: corrida.venceEn, brechaJsMs: brecha,
+             detalle: 'El contador llegó a cero con la app abierta.' });
+
+    corrida = null;
+    detenerContador();
+    $('marcado').dataset.corrida = id;
+    $('marcado').hidden = false;
+    $('btnArrancar').disabled = false;
+    $('btnCancelar').disabled = true;
+    $('estadoCorrida').textContent = 'Terminada — marcá abajo si te avisó';
+    refrescarCapacidades();
+    refrescarLog();
+  }
+
   // =====================================================================
   // Contador en pantalla
   // =====================================================================
@@ -479,6 +513,7 @@
       $('contador').textContent = '00:00';
       $('contador').className = 'contador vencido';
       $('sobrante').textContent = 'Venció hace ' + Math.round(-restante / 1000) + ' s';
+      finalizar();
       return;
     }
     var s = Math.ceil(restante / 1000);
@@ -557,14 +592,28 @@
       corrida.timeoutA = null;
       corrida.timeoutC = null;
       var faltaMs = corrida.venceEn - ahora;
+
+      // Aviso para no leer mal el log: si la página se recargó del todo, los beeps que
+      // la estrategia C había agendado en el motor de audio se perdieron con la página
+      // vieja, y el navegador no nos deja agendar audio nuevo sin que toques la pantalla.
+      // Si en esta corrida C no suena, puede ser por esto y no porque C haya fallado.
+      if (corrida.estrategias.indexOf('C') !== -1) {
+        anotar({ idCorrida: corrida.idCorrida, tipo: 'aviso_reanudacion', estrategia: 'C',
+                 detalle: 'La página se recargó: los beeps agendados se perdieron. Este resultado de C no es concluyente.' });
+      }
+
       if (corrida.estrategias.indexOf('A') !== -1) {
+        // Copiamos los datos ahora: cuando este temporizador dispare, finalizar() ya
+        // puede haber corrido y dejado `corrida` en null.
+        var idcR = corrida.idCorrida;
+        var venceR = corrida.venceEn;
         corrida.timeoutA = setTimeout(function () {
           var t = Date.now();
-          notificar('Descanso terminado', 'Estrategia A (reanudada)', { idCorrida: corrida.idCorrida, estrategia: 'A' })
+          notificar('Descanso terminado', 'Estrategia A (reanudada)', { idCorrida: idcR, estrategia: 'A' })
             .then(function (via) {
-              anotar({ idCorrida: corrida.idCorrida, tipo: 'disparo', estrategia: 'A',
-                       via: 'setTimeout reanudado → ' + via, venceEn: corrida.venceEn,
-                       disparoEn: t, desvioMs: t - corrida.venceEn, brechaJsMs: medirBrechaJS() });
+              anotar({ idCorrida: idcR, tipo: 'disparo', estrategia: 'A',
+                       via: 'setTimeout reanudado → ' + via, venceEn: venceR,
+                       disparoEn: t, desvioMs: t - venceR, brechaJsMs: medirBrechaJS() });
               refrescarLog();
             });
         }, faltaMs);
