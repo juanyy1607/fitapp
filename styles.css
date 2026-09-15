@@ -1,0 +1,234 @@
+/* styles.css — oscuro, tipografía grande, pensado para leerse de reojo en el gimnasio. */
+
+:root {
+  --fondo: #0f1115;
+  --panel: #171a21;
+  --panel2: #1e222b;
+  --borde: #2a2f3a;
+  --texto: #e8eaf0;
+  --tenue: #9aa3b5;
+  --acento: #4da3ff;
+  --ok: #3ddc84;
+  --mal: #ff6b6b;
+  --alerta: #ffc84d;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
+  background: var(--fondo);
+  color: var(--texto);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  max-width: 720px;
+  margin-inline: auto;
+  -webkit-text-size-adjust: 100%;
+}
+
+header { padding: 8px 0 4px; }
+h1 { font-size: 1.35rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+.sub { margin: 0; color: var(--tenue); font-size: 0.9rem; }
+
+section {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 16px 0;
+}
+section.destacada { border-color: var(--acento); }
+
+h2 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--tenue);
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+h3 { font-size: 1rem; margin: 0 0 6px; }
+
+/* ------------------------------------------------------------- capacidades */
+
+.caps { display: grid; gap: 6px; }
+.cap {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  background: var(--panel2);
+  border-left: 3px solid var(--borde);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 0.86rem;
+}
+.cap.ok { border-left-color: var(--ok); }
+.cap.no { border-left-color: var(--mal); }
+.cap-n { color: var(--tenue); }
+.cap-v { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.cap.ok .cap-v { color: var(--ok); }
+.cap.no .cap-v { color: var(--mal); }
+
+.agente {
+  font-size: 0.68rem;
+  color: var(--tenue);
+  word-break: break-all;
+  margin: 10px 0 0;
+  line-height: 1.35;
+}
+
+/* --------------------------------------------------------------- formulario */
+
+fieldset {
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 0 0 14px;
+}
+legend { font-size: 0.8rem; color: var(--tenue); padding: 0 6px; }
+.leve { color: var(--tenue); font-weight: 400; }
+
+.radio {
+  display: inline-block;
+  padding: 10px 16px;
+  margin: 2px 4px 2px 0;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.radio:has(input:checked) { border-color: var(--acento); background: rgba(77, 163, 255, 0.14); }
+.radio input { margin-right: 6px; }
+
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.check + .check { border-top: 1px solid var(--borde); }
+.check:has(input:checked) { background: rgba(77, 163, 255, 0.09); }
+.check input { margin-top: 3px; width: 20px; height: 20px; flex: none; accent-color: var(--acento); }
+.check em { display: block; color: var(--tenue); font-size: 0.8rem; font-style: normal; margin-top: 2px; }
+
+.campo { display: block; margin-bottom: 10px; font-size: 0.82rem; color: var(--tenue); }
+select, textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px;
+  background: var(--panel2);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+/* ---------------------------------------------------------------- contador */
+
+.contador {
+  font-size: 4.2rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  margin: 6px 0;
+  color: var(--tenue);
+}
+.contador.corriendo { color: var(--acento); }
+.contador.vencido { color: var(--mal); }
+.sobrante, .estado { text-align: center; color: var(--tenue); font-size: 0.85rem; margin: 0 0 12px; }
+
+/* ----------------------------------------------------------------- botones */
+
+.botonera { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  flex: 1 1 auto;
+  min-width: 120px;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: var(--panel2);
+  color: var(--texto);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:active { transform: translateY(1px); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+button.principal { background: var(--acento); border-color: var(--acento); color: #06121f; }
+button.ok { background: var(--ok); border-color: var(--ok); color: #05210f; }
+button.mal { background: var(--mal); border-color: var(--mal); color: #2a0808; }
+button.peligro { color: var(--mal); border-color: var(--mal); }
+
+.ayuda { color: var(--tenue); font-size: 0.8rem; margin: 10px 0 0; }
+
+/* ------------------------------------------------------------------ avisos */
+
+.aviso {
+  background: rgba(255, 200, 77, 0.12);
+  border: 1px solid var(--alerta);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 12px 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+.marcado {
+  background: var(--panel2);
+  border: 1px solid var(--alerta);
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 12px;
+}
+
+/* -------------------------------------------------------------------- log */
+
+.log { margin-top: 12px; display: grid; gap: 4px; }
+.vacio { color: var(--tenue); font-size: 0.85rem; }
+
+.ev {
+  background: var(--panel2);
+  border-left: 3px solid var(--borde);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 0.8rem;
+}
+.ev.tipo-disparo { border-left-color: var(--ok); }
+.ev.tipo-error,
+.ev.tipo-sw_no_disparo { border-left-color: var(--mal); }
+.ev.tipo-inicio { border-left-color: var(--acento); }
+.ev.tipo-reanudacion,
+.ev.tipo-veredicto_humano { border-left-color: var(--alerta); }
+
+.ev-cab { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ev-hora { color: var(--tenue); font-variant-numeric: tabular-nums; font-size: 0.75rem; }
+.ev-tipo { font-weight: 700; }
+.ev-det { color: var(--tenue); margin-top: 3px; line-height: 1.4; }
+
+.tag {
+  font-size: 0.68rem;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--borde);
+  font-weight: 600;
+}
+.tag.bien { color: var(--ok); border-color: var(--ok); }
+.tag.mal { color: var(--mal); border-color: var(--mal); }
+.tag.origen { color: var(--tenue); }
+.tag.est-A, .tag.est-B, .tag.est-C, .tag.est-D, .tag.est-E {
+  color: var(--acento);
+  border-color: var(--acento);
+}
+
+footer { color: var(--tenue); font-size: 0.75rem; text-align: center; padding: 8px 0 0; }
+
+@media (prefers-color-scheme: light) {
+  /* A propósito no cambia: el banco de pruebas se usa siempre en oscuro para que el
+     contador se lea igual en el gimnasio a cualquier hora. */
+}

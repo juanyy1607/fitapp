@@ -1,0 +1,5 @@
+# Nada que ignorar todavía: el banco de pruebas no tiene dependencias ni build.
+# Los JSON exportados desde el teléfono guardalos en resultados/ si querés versionarlos.
+node_modules/
+.DS_Store
+Thumbs.db
