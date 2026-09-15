@@ -105,10 +105,45 @@ tratando como música sonando.
 4. **Se registra `estadoAudio`** y hay un botón nuevo, *Probar alarma (archivo)*, que usa el
    mismo camino que E.
 
-### Pendiente de esta tanda
+---
 
-Nada de Android. Nada de modo avión. Nada de 90 s ni de 5 minutos. Solo instalada, nunca
-en pestaña. La pregunta del subsuelo del gimnasio **sigue sin respuesta**.
+## Tanda 2 — 15/09/2026, iPhone, con la estrategia E corregida
+
+Dos corridas de 90 s con la pantalla apagada. **La estrategia E funciona.**
+
+| | Corrida 1 | Corrida 2 |
+|---|---|---|
+| Disparo vs. lo previsto | **+167 ms** | **+163 ms** |
+| Posición del audio al vencer | 90,01 s | 90,02 s |
+| JS congelado en el momento del disparo | 1.816 ms | 1.989 ms |
+| Escenario detectado | oculta, página viva (1 ms) | oculta, página viva (0 ms) |
+
+El dato que cierra la discusión: **el JavaScript estaba congelado casi 2 segundos cuando la
+alarma sonó.** El sonido no dependió de él, salió del archivo que ya estaba en la cola de
+reproducción. 167 ms de desvío sobre 90 segundos es 0,19% de error.
+
+Sonó además **por los AirPods**, que es el caso de uso real en el gimnasio.
+
+También quedó confirmado por qué la estrategia C nunca hizo ruido: la prueba de sonido
+registró `estadoAudio: suspended`. El motor de Web Audio estaba suspendido y los beeps
+quedaban agendados sin reproducirse. No era el interruptor de silencio.
+
+### Un efecto secundario que conviene aprovechar
+
+En las dos corridas el audio se pausó a los ~92,8 s, antes de terminar los 4 s de alarma:
+el usuario la cortó desde los controles multimedia. O sea que **la pantalla bloqueada y los
+AirPods ya sirven para apagar la alarma sin desbloquear el teléfono.** Eso es exactamente lo
+que uno quiere entre series, y sale gratis.
+
+### Lo que sigue sin probarse
+
+- **Modo avión.** Las dos corridas tenían red (`conRed: true`). La estrategia E no usa red
+  para nada, así que el temporizador debería andar igual; lo que falta verificar es otra
+  cosa: **que la app abra sin señal**, que es el service worker, no el timer.
+- **Android.** No hay teléfono a mano. Es un sistema distinto, con su propio mecanismo de
+  congelado (Doze). El resultado de iPhone no se puede extrapolar.
+- Escenario 5, los 5 minutos completos.
+- En pestaña del navegador, sin instalar.
 
 ---
 
@@ -146,16 +181,19 @@ Al terminar todo: **Exportar JSON** y pasame el archivo.
 
 Marcá: `SÍ` avisó a tiempo · `TARDE` avisó pero fuera de hora · `NO` no avisó · `—` sin probar
 
-### iPhone — instalada (pantalla de inicio)
+### iPhone — instalada (pantalla de inicio) · iOS 18.7, Safari 27
 
 | # | Escenario | A | B | C | D (contador) | E | Brecha JS | Notas |
 |---|---|---|---|---|---|---|---|---|
-| 1 | Abierta, pantalla encendida | | | | | | | |
-| 2 | Abierta, pantalla bloqueada | | | | | | | |
-| 3 | Segundo plano, pantalla encendida | | | | | | | |
-| 4 | Segundo plano, pantalla bloqueada | | | | | | | |
-| 5 | Bloqueada, bolsillo, 5 min | | | | | | | |
-| 6 | **Modo avión + bloqueada** | | | | | | | |
+| 1 | Abierta, pantalla encendida | SÍ (+11 ms) | SÍ (+12 ms) | NO | OK | — | 552 ms | C disparó a tiempo pero no sonó: Web Audio `suspended` |
+| 2 | Abierta, pantalla bloqueada | — | TARDE (+14,8 s) | NO | OK | **SÍ (+167 ms)** | 0–2.000 ms con E; 27 s con B | E sonó en AirPods |
+| 3 | Segundo plano, pantalla encendida | — | — | — | — | — | — | |
+| 4 | Segundo plano, pantalla bloqueada | — | — | TARDE (+33 s) | OK | **SÍ (+163 ms)** | 54 s con C; 0 ms con E | |
+| 5 | Bloqueada, bolsillo, 5 min | — | — | — | — | — | — | sin probar |
+| 6 | **Modo avión + bloqueada** | — | — | — | — | — | — | **SIN PROBAR — falta esto** |
+
+En los escenarios 2 y 4: desde la web no se distingue "pantalla bloqueada" de "cambié de
+app". Las dos se ven igual. Lo que sí se mide con certeza es si la página siguió viva.
 
 ### iPhone — pestaña de Safari
 
