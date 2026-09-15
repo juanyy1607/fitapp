@@ -181,7 +181,7 @@ Usamos **GitHub Pages**, que es gratis y no pide tarjeta.
 2. Pestaña **Settings** (arriba a la derecha).
 3. Menú de la izquierda: **Pages**.
 4. En *Source* elegí **Deploy from a branch**.
-5. En *Branch* elegí `main` y carpeta `/ (root)`. Tocá **Save**.
+5. En *Branch* elegí `master` y carpeta `/ (root)`. Tocá **Save**.
 6. Esperá 1 o 2 minutos y recargá esa pantalla: aparece la dirección, con la forma
    `https://TU-USUARIO.github.io/fitapp/`.
 
