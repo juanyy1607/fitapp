@@ -135,13 +135,21 @@ el usuario la cortó desde los controles multimedia. O sea que **la pantalla blo
 AirPods ya sirven para apagar la alarma sin desbloquear el teléfono.** Eso es exactamente lo
 que uno quiere entre series, y sale gratis.
 
+### Modo avión — probado, anda
+
+Juan lo corrió en modo avión con la pantalla bloqueada y la alarma sonó. La app abrió sin
+señal, así que el service worker cachea bien y el escenario del subsuelo del gimnasio está
+cubierto.
+
+Queda como reporte verbal: el JSON de esa corrida no se exportó. El log sigue guardado en
+IndexedDB en el teléfono, así que si algún día hace falta el desvío exacto, se exporta y
+aparece. No hace falta repetir la prueba.
+
 ### Lo que sigue sin probarse
 
-- **Modo avión.** Las dos corridas tenían red (`conRed: true`). La estrategia E no usa red
-  para nada, así que el temporizador debería andar igual; lo que falta verificar es otra
-  cosa: **que la app abra sin señal**, que es el service worker, no el timer.
 - **Android.** No hay teléfono a mano. Es un sistema distinto, con su propio mecanismo de
-  congelado (Doze). El resultado de iPhone no se puede extrapolar.
+  congelado (Doze). El resultado de iPhone no se puede extrapolar, y en Latinoamérica
+  Android es la mayoría de los usuarios. **Es el riesgo abierto del proyecto.**
 - Escenario 5, los 5 minutos completos.
 - En pestaña del navegador, sin instalar.
 
@@ -190,7 +198,7 @@ Marcá: `SÍ` avisó a tiempo · `TARDE` avisó pero fuera de hora · `NO` no av
 | 3 | Segundo plano, pantalla encendida | — | — | — | — | — | — | |
 | 4 | Segundo plano, pantalla bloqueada | — | — | TARDE (+33 s) | OK | **SÍ (+163 ms)** | 54 s con C; 0 ms con E | |
 | 5 | Bloqueada, bolsillo, 5 min | — | — | — | — | — | — | sin probar |
-| 6 | **Modo avión + bloqueada** | — | — | — | — | — | — | **SIN PROBAR — falta esto** |
+| 6 | **Modo avión + bloqueada** | — | — | — | — | **SÍ** | — | Reportado por Juan, sin exportar el JSON |
 
 En los escenarios 2 y 4: desde la web no se distingue "pantalla bloqueada" de "cambié de
 app". Las dos se ven igual. Lo que sí se mide con certeza es si la página siguió viva.
