@@ -33,13 +33,23 @@
   <div class="botonera">
     <button id="btnPermiso" class="sec">Pedir permiso de notificaciones</button>
     <button id="btnProbarNotif" class="sec">Probar notificación</button>
-    <button id="btnProbarSonido" class="sec">Probar sonido</button>
+    <button id="btnProbarSonido" class="sec">Probar sonido (Web Audio)</button>
+    <button id="btnProbarAlarma" class="sec">Probar alarma (archivo)</button>
     <button id="btnRefrescar" class="sec">Refrescar</button>
   </div>
   <p class="ayuda">
-    Tocá <strong>Pedir permiso</strong> y <strong>Probar sonido</strong> antes de la primera corrida.
-    El navegador no deja que la app haga ruido si vos no la tocaste primero.
+    Tocá <strong>Pedir permiso</strong> y las <strong>dos pruebas de sonido</strong> antes de la
+    primera corrida. El navegador no deja que la app haga ruido si vos no la tocaste primero.
   </p>
+  <div class="aviso">
+    <strong>Antes de decir "no sonó", revisá el iPhone:</strong><br>
+    1 · El interruptor físico del costado, arriba a la izquierda, no tiene que estar en silencio
+    (sin la franja naranja a la vista).<br>
+    2 · El volumen de <em>timbre</em> arriba.<br>
+    3 · Sin Modo Concentración ni No Molestar.<br>
+    Si el interruptor está en silencio, iOS no deja sonar nada de esto y todas las corridas
+    dan "no avisó" por un motivo que no tiene nada que ver con la estrategia.
+  </div>
 </section>
 
 <!-- ============================================================ 2. CONFIGURACIÓN -->
@@ -81,9 +91,11 @@
     </label>
 
     <label class="check">
-      <input type="checkbox" id="estE">
-      <span><strong>E · Audio silencioso en bucle</strong> <span class="leve">(extra)</span>
-      <em>Reproduce un sonido casi inaudible para que el sistema no congele la página. La candidata con más chances.</em></span>
+      <input type="checkbox" id="estE" checked>
+      <span><strong>E · Alarma adentro del archivo de audio</strong> <span class="leve">(la favorita)</span>
+      <em>Reproduce un WAV que es silencio durante todo el descanso y después trae la alarma adentro.
+      El tiempo lo cuenta el hardware de audio, no el JavaScript. Medido el 15/09: mantiene la página
+      viva con la pantalla bloqueada (brecha de 0 a 1000 ms, contra 27 a 54 segundos sin ella).</em></span>
     </label>
   </fieldset>
 

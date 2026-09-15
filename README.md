@@ -34,7 +34,7 @@ común llegue a ejecutarse. Por eso lo que este banco mide, en el fondo, es
 | **B** | Service worker + `setTimeout` | Igual pero en el service worker, con `waitUntil()` para pedir que no lo maten | El navegador igual le pone un techo |
 | **C** | Wake Lock + sonido | Deja la pantalla prendida y agenda los beeps en el reloj del motor de audio | El wake lock se suelta al ocultar la página |
 | **D** | Recuperación por marca de tiempo | **No avisa.** Verifica que el contador esté bien al volver | Funciona siempre, pero no resuelve el problema |
-| **E** | Audio silencioso en bucle | Reproduce sonido casi inaudible para que el sistema trate la app como "media activa" | **La candidata con más chances** |
+| **E** | Alarma adentro del archivo de audio | Reproduce un WAV que es silencio durante el descanso y trae la alarma adentro | **La favorita, y ya con evidencia a favor** |
 
 ### Sobre la estrategia D — leer con atención
 
@@ -50,11 +50,65 @@ contra la última marca es exactamente cuánto tiempo el sistema tuvo el JavaScr
 congelado. Si esa brecha cubre el vencimiento, ninguna estrategia con `setTimeout` podía
 haber avisado, y el log lo demuestra con números.
 
-### Sobre la estrategia E — la agregué yo
+### Sobre la estrategia E
 
 No estaba en el pedido original. La sumé porque es la única técnica con historial de
-funcionar de verdad en la web, y cuesta un checkbox. Si no te convence, dejala sin marcar
-y se comporta como si no existiera.
+funcionar de verdad en la web. Después de la primera tanda de mediciones la reescribí, y
+hoy es la que más chances tiene. Ver abajo.
+
+---
+
+## Tanda 1 — 15/09/2026, iPhone (iOS 18.7, Safari 27), instalada
+
+9 corridas de 30 s. **El hallazgo principal ya está.**
+
+### Cuánto sobrevive la página con la pantalla bloqueada
+
+| Estrategia | Brecha de JS congelado al terminar |
+|---|---|
+| B (service worker) | **26.949 ms** |
+| C (wake lock) | **53.787 ms** |
+| E (audio) | **0 ms** |
+| E (audio) | **1 ms** |
+| E (audio) | **1.001 ms** |
+
+Mientras la app reproduce audio, **iOS no congela la página**. Sin audio, la congela a los
+pocos segundos. Tres corridas consistentes. Esto se ve además en la pantalla bloqueada: iOS
+muestra el reproductor multimedia con el ícono de la app, que es la señal de que la está
+tratando como música sonando.
+
+### Lo demás que quedó medido
+
+- **A** — con pantalla encendida disparó con 11 ms de desvío. Sin datos con pantalla
+  bloqueada. La notificación de iOS llega como banner, **no como alarma**: no alcanza para
+  el gimnasio.
+- **B** — pantalla encendida: 12 ms de desvío. Pantalla bloqueada: **14.784 ms tarde**,
+  disparó recién al desbloquear. Descartada para el caso de uso.
+- **C** — el wake lock se soltó 6 s después de ocultar la app, como estaba previsto.
+  Con pantalla bloqueada disparó 33 s tarde. Y ni con la pantalla encendida se escuchó,
+  aunque el respaldo disparó con 2 ms de desvío: la sospecha es que el motor de Web Audio
+  estaba suspendido. Por eso ahora se registra `estadoAudio` en cada corrida de C.
+- **D** — el contador siempre mostró el valor correcto al volver, como estaba previsto.
+- **E** — **no tenía alarma conectada.** Era un error mío: mantenía la página viva pero no
+  hacía sonar nada. Los "no avisó" de esa tanda no significan nada. Está corregido.
+
+### Qué se corrigió después de esta tanda
+
+1. **E pasó de "audio silencioso + setTimeout" a "un solo WAV con la alarma adentro".**
+   El tiempo lo cuenta el hardware de audio, no el JavaScript. Aunque el sistema congele la
+   página, el sonido ya está en la cola de reproducción.
+2. **`finalizar()` ya no corta el audio.** Cortaba justo al vencimiento, o sea un instante
+   antes de que la alarma sonara.
+3. **La app detecta sola si estuvo oculta** y lo guarda en `escenarioDetectado`. En esta
+   tanda las 9 corridas quedaron etiquetadas como "escenario 1, pantalla encendida" porque
+   la lista de escenarios nunca se movió, aunque la pantalla estuvo bloqueada en varias.
+4. **Se registra `estadoAudio`** y hay un botón nuevo, *Probar alarma (archivo)*, que usa el
+   mismo camino que E.
+
+### Pendiente de esta tanda
+
+Nada de Android. Nada de modo avión. Nada de 90 s ni de 5 minutos. Solo instalada, nunca
+en pestaña. La pregunta del subsuelo del gimnasio **sigue sin respuesta**.
 
 ---
 

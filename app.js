@@ -209,49 +209,136 @@
   }
 
   /*
-   * ESTRATEGIA E — audio casi inaudible en bucle.
+   * ESTRATEGIA E — un solo archivo de audio: silencio + alarma al final.
    *
-   * La idea: los sistemas operativos tratan a una app que está reproduciendo audio como
-   * "media activa" y tardan mucho más en congelarla. Fabricamos un WAV de un segundo con
-   * un tono casi inaudible y lo dejamos en loop mientras corre el temporizador.
+   * Esta es la idea central de todo el banco, y la reescribí después de la primera
+   * tanda de mediciones del 15/09. Vale la pena entenderla bien.
    *
-   * Es la técnica que usan los temporizadores web que sí funcionan. Es la candidata con
-   * más chances de las cinco. Costo: la batería dura un poco menos.
+   * Primer hallazgo medido: mientras la app reproduce audio, iOS NO congela la página.
+   * Con la pantalla bloqueada, la brecha de JavaScript congelado dio 0 ms, 1 ms y
+   * 1001 ms en tres corridas. Sin audio, dio 27.000 ms y 54.000 ms. El sistema trata a
+   * la app como si estuviera sonando música y la deja viva.
+   *
+   * Pero mantener la página viva no alcanza si después hay que confiar en un setTimeout.
+   * Así que damos el paso siguiente: en vez de reproducir silencio y despertar al
+   * JavaScript para que toque la alarma, fabricamos UN SOLO archivo WAV que es
+   * silencio durante los 90 segundos y después tiene la alarma adentro. Lo arrancamos
+   * una vez y listo.
+   *
+   * La diferencia es toda: el que cuenta el tiempo pasa a ser el hardware de audio, no
+   * el JavaScript. Aunque el sistema congele la página entera, el sonido ya está en la
+   * cola de reproducción y suena igual. El JavaScript deja de estar en el camino crítico.
+   *
+   * Costo: un WAV de 90 s pesa como 1,4 MB en memoria. Se arma al instante y no toca el
+   * disco ni la red. La batería dura un poco menos porque el audio queda activo.
    */
-  function wavCasiSilencioso(segundos) {
-    var tasa = 8000, n = tasa * segundos, bytes = 44 + n * 2;
+  function wavSilencioMasAlarma(segundosSilencio) {
+    var tasa = 8000;
+    var segAlarma = 4;
+    var nSilencio = Math.round(tasa * segundosSilencio);
+    var nAlarma = tasa * segAlarma;
+    var n = nSilencio + nAlarma;
+    var bytes = 44 + n * 2;
     var buf = new ArrayBuffer(bytes), v = new DataView(buf), i;
+
     function txt(pos, s) { for (var j = 0; j < s.length; j++) v.setUint8(pos + j, s.charCodeAt(j)); }
     txt(0, 'RIFF'); v.setUint32(4, bytes - 8, true); txt(8, 'WAVE');
     txt(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
     v.setUint32(24, tasa, true); v.setUint32(28, tasa * 2, true);
     v.setUint16(32, 2, true); v.setUint16(34, 16, true);
     txt(36, 'data'); v.setUint32(40, n * 2, true);
-    // Amplitud mínima pero NO cero: el silencio digital exacto algunos sistemas lo
-    // descartan y entonces no cuenta como "reproduciendo audio".
-    for (i = 0; i < n; i++) v.setInt16(44 + i * 2, (i % 2 ? 1 : -1), true);
-    var bin = '', u8 = new Uint8Array(buf);
-    for (i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
-    return 'data:audio/wav;base64,' + btoa(bin);
+
+    // Tramo 1: casi silencio. Amplitud mínima pero NO cero: el silencio digital exacto
+    // algunos sistemas lo descartan, y entonces deja de contar como "audio sonando".
+    for (i = 0; i < nSilencio; i++) v.setInt16(44 + i * 2, (i % 2 ? 1 : -1), true);
+
+    // Tramo 2: la alarma. Ocho pitidos de 880 Hz, cortos y separados, que es el patrón
+    // que se escucha desde el bolsillo mejor que un tono continuo.
+    for (i = 0; i < nAlarma; i++) {
+      var t = i / tasa;
+      var dentroDelPitido = (t % 0.5) < 0.22;
+      var muestra = 0;
+      if (dentroDelPitido) {
+        // Sobre de ataque y caída para que no chasquee en los bordes.
+        var pos = (t % 0.5) / 0.22;
+        var sobre = Math.sin(Math.PI * pos);
+        muestra = Math.sin(2 * Math.PI * 880 * t) * sobre * 22000;
+      }
+      v.setInt16(44 + (nSilencio + i) * 2, muestra, true);
+    }
+
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
   }
 
-  function arrancarAudioSilencioso(idCorrida) {
-    if (!audioSilencioso) {
-      audioSilencioso = new Audio(wavCasiSilencioso(1));
-      audioSilencioso.loop = true;
-      audioSilencioso.volume = 0.02;
+  function arrancarAudioProgramado(idCorrida, duracionSeg) {
+    var url;
+    try {
+      url = wavSilencioMasAlarma(duracionSeg);
+    } catch (e) {
+      return anotar({ idCorrida: idCorrida, tipo: 'error', estrategia: 'E',
+                      detalle: 'No se pudo fabricar el WAV: ' + e.message });
     }
+
+    pararAudioProgramado();
+    audioSilencioso = new Audio(url);
+    audioSilencioso.loop = false;
+    audioSilencioso.volume = 1;
+    audioSilencioso.dataset_idCorrida = idCorrida;
+
+    // Cuando el archivo entra en el tramo de la alarma, esto es lo que suena. No hay
+    // ningún setTimeout de por medio: lo dispara el reloj del reproductor.
+    audioSilencioso.addEventListener('timeupdate', function onTiempo() {
+      if (audioSilencioso.currentTime >= duracionSeg && !audioSilencioso._sonoAlarma) {
+        audioSilencioso._sonoAlarma = true;
+        var ahora = Date.now();
+        anotar({ idCorrida: idCorrida, tipo: 'disparo', estrategia: 'E',
+                 via: 'alarma adentro del archivo de audio (sin setTimeout)',
+                 disparoEn: ahora, disparoEnIso: new Date(ahora).toISOString(),
+                 posAudioSeg: Math.round(audioSilencioso.currentTime * 100) / 100,
+                 brechaJsMs: medirBrechaJS() });
+        refrescarLog();
+      }
+    });
+
+    audioSilencioso.addEventListener('ended', function () {
+      anotar({ idCorrida: idCorrida, tipo: 'audio_terminado', estrategia: 'E',
+               detalle: 'El archivo se reprodujo entero: el audio nunca se cortó.' });
+      refrescarLog();
+    });
+
+    audioSilencioso.addEventListener('pause', function () {
+      if (audioSilencioso && !audioSilencioso.ended && !audioSilencioso._cerrandoAdrede) {
+        anotar({ idCorrida: idCorrida, tipo: 'audio_pausado', estrategia: 'E',
+                 posAudioSeg: Math.round(audioSilencioso.currentTime * 100) / 100,
+                 detalle: 'El sistema o el usuario pausó el audio. Si pasó antes del final, la alarma no va a sonar.' });
+        refrescarLog();
+      }
+    });
+
     return audioSilencioso.play().then(function () {
-      anotar({ idCorrida: idCorrida, tipo: 'audio_silencioso_on', estrategia: 'E',
-               detalle: 'Bucle de audio casi inaudible en marcha para evitar que el sistema congele la página.' });
+      anotar({ idCorrida: idCorrida, tipo: 'audio_programado_on', estrategia: 'E',
+               detalle: 'Sonando un WAV de ' + duracionSeg + ' s de silencio + 4 s de alarma. ' +
+                        'La cuenta la lleva el hardware de audio, no el JavaScript.' });
     }).catch(function (e) {
       anotar({ idCorrida: idCorrida, tipo: 'error', estrategia: 'E',
-               detalle: 'No se pudo arrancar el audio silencioso: ' + e.message });
+               detalle: 'El navegador no dejó arrancar el audio: ' + e.message +
+                        ' (hay que tocar la pantalla antes, al menos una vez).' });
     });
   }
 
-  function pararAudioSilencioso() {
-    if (audioSilencioso) { try { audioSilencioso.pause(); } catch (e) {} }
+  // Devuelve hasta dónde llegó a reproducirse el audio. Es el testigo más honesto que
+  // tenemos: si llegó hasta el final, el audio nunca se cortó aunque el JS estuviera muerto.
+  function posicionAudio() {
+    return audioSilencioso ? Math.round(audioSilencioso.currentTime * 100) / 100 : null;
+  }
+
+  function pararAudioProgramado() {
+    if (audioSilencioso) {
+      audioSilencioso._cerrandoAdrede = true;   // para no anotar un "audio_pausado" falso
+      try { audioSilencioso.pause(); } catch (e) {}
+      try { if (audioSilencioso.src.indexOf('blob:') === 0) URL.revokeObjectURL(audioSilencioso.src); } catch (e) {}
+      audioSilencioso = null;
+    }
   }
 
   // =====================================================================
@@ -408,7 +495,11 @@
       var ctx = asegurarAudio();
       if (ctx) {
         programarBeeps(ctx, duracionSeg, corrida.idCorrida, venceEn);
+        // Anotamos el estado del motor de audio. En la tanda del 15/09, C no sonó ni
+        // siquiera con la pantalla encendida: la sospecha es que el motor estaba
+        // 'suspended' y los beeps quedaron agendados sin reproducirse nunca.
         anotar({ idCorrida: corrida.idCorrida, tipo: 'beeps_programados', estrategia: 'C',
+                 estadoAudio: ctx.state, relojAudio: Math.round(ctx.currentTime * 1000) / 1000,
                  detalle: 'Beeps agendados en el reloj del motor de audio, a ' + duracionSeg + ' s.' });
       }
       // Red de seguridad por si el motor de audio se suspende: un setTimeout común.
@@ -417,6 +508,8 @@
         beepInmediato();
         anotar({ idCorrida: idc, tipo: 'disparo', estrategia: 'C',
                  via: 'setTimeout de respaldo (beep inmediato)',
+                 estadoAudio: ctxAudio ? ctxAudio.state : 'sin contexto',
+                 relojAudio: ctxAudio ? Math.round(ctxAudio.currentTime * 1000) / 1000 : null,
                  venceEn: venceEn, disparoEn: ahora, desvioMs: ahora - venceEn,
                  brechaJsMs: medirBrechaJS() });
         refrescarLog();
@@ -429,10 +522,9 @@
                detalle: 'Marca de tiempo guardada. Esta estrategia NO avisa: solo comprueba que el contador esté bien al volver.' });
     }
 
-    // --- ESTRATEGIA E: audio silencioso en bucle
+    // --- ESTRATEGIA E: un WAV de silencio + alarma, reproducido de una sola vez
     if (estrategias.indexOf('E') !== -1) {
-      asegurarAudio();
-      arrancarAudioSilencioso(corrida.idCorrida);
+      arrancarAudioProgramado(idc, duracionSeg);
     }
 
     arrancarContador();
@@ -446,7 +538,7 @@
     if (corrida.timeoutC) clearTimeout(corrida.timeoutC);
     cancelarBeeps();
     soltarWakeLock();
-    pararAudioSilencioso();
+    pararAudioProgramado();
     if (registroSW && registroSW.active) {
       registroSW.active.postMessage({ tipo: 'CANCELAR_TIMER_SW', idCorrida: corrida.idCorrida });
     }
@@ -468,16 +560,42 @@
    * revisarCorridaPendiente() cuando volvés. Los dos caminos terminan igual: sueltan los
    * recursos y te muestran el cartel de "¿te avisó?".
    */
+  /*
+   * Describe lo que REALMENTE pasó, a partir de los datos y no de la lista de escenarios.
+   *
+   * Límite honesto: desde la web no se puede distinguir "bloqueaste la pantalla" de
+   * "cambiaste de app". Las dos cosas se ven igual: la página pasa a oculta. Lo que sí
+   * medimos con certeza es si la página siguió viva o si el sistema la congeló, que es
+   * lo que de verdad decide si el temporizador puede avisar.
+   */
+  function describirEscenario(seOculto, brechaMs) {
+    if (!seOculto) return 'la app estuvo a la vista todo el tiempo';
+    if (brechaMs === null) return 'la app estuvo oculta; no se pudo medir la brecha';
+    if (brechaMs < 2000) return 'la app estuvo oculta y la página SIGUIÓ VIVA (brecha ' + brechaMs + ' ms)';
+    return 'la app estuvo oculta y el sistema CONGELÓ la página ' + Math.round(brechaMs / 1000) + ' s';
+  }
+
   function finalizar() {
     if (!corrida) return;
     var id = corrida.idCorrida;
     var brecha = medirBrechaJS();
+    var seOculto = !!corrida.seOculto;
+
+    BancoDB.parchearCorrida(id, {
+      seOculto: seOculto,
+      brechaFinalMs: brecha,
+      posAudioFinSeg: posicionAudio(),
+      escenarioDetectado: describirEscenario(seOculto, brecha)
+    });
 
     soltarWakeLock();
-    pararAudioSilencioso();
     localStorage.removeItem(CLAVE_ACTIVA);
 
+    // OJO: acá NO se corta el audio de la estrategia E. La alarma está adentro del
+    // archivo y empieza justo ahora: si lo pausáramos, la mataríamos un instante antes
+    // de que suene. El audio se corta al cancelar, o se termina solo.
     anotar({ idCorrida: id, tipo: 'fin', venceEn: corrida.venceEn, brechaJsMs: brecha,
+             posAudioSeg: posicionAudio(),
              detalle: 'El contador llegó a cero con la app abierta.' });
 
     corrida = null;
@@ -576,6 +694,11 @@
 
     if (yaVencio) {
       // La corrida terminó mientras no estábamos. Cerramos y pedimos el veredicto humano.
+      BancoDB.parchearCorrida(guardada.idCorrida, {
+        seOculto: true,
+        brechaFinalMs: brecha,
+        escenarioDetectado: describirEscenario(true, brecha)
+      });
       localStorage.removeItem(CLAVE_ACTIVA);
       corrida = null;
       $('marcado').dataset.corrida = guardada.idCorrida;
@@ -629,10 +752,21 @@
 
   document.addEventListener('visibilitychange', function () {
     var brecha = medirBrechaJS();
+
+    // Dejamos marcado que la corrida estuvo oculta. En la tanda del 15/09 las nueve
+    // corridas quedaron etiquetadas como "escenario 1, pantalla encendida" porque la
+    // lista de escenarios nunca se movió, aunque la pantalla estuvo bloqueada en varias.
+    // Desde acá la app se da cuenta sola y no depende de que uno se acuerde.
+    if (corrida && document.visibilityState === 'hidden') {
+      corrida.seOculto = true;
+      try { localStorage.setItem(CLAVE_ACTIVA, JSON.stringify(corrida)); } catch (e) {}
+    }
+
     anotar({
       idCorrida: corrida ? corrida.idCorrida : null,
       tipo: 'visibilidad',
       estado: document.visibilityState,
+      posAudioSeg: posicionAudio(),
       brechaJsMs: document.visibilityState === 'visible' ? brecha : null
     });
     if (document.visibilityState === 'visible') {
@@ -791,7 +925,27 @@
       notificar('Prueba', 'Si ves esto, las notificaciones andan.', { estrategia: 'prueba' })
         .then(function (via) { anotar({ tipo: 'notificacion_prueba', via: via }); refrescarLog(); });
     });
-    $('btnProbarSonido').addEventListener('click', function () { asegurarAudio(); beepInmediato(); });
+    $('btnProbarSonido').addEventListener('click', function () {
+      var ctx = asegurarAudio();
+      beepInmediato();
+      anotar({ tipo: 'prueba_sonido', via: 'Web Audio (el mismo motor que usa la estrategia C)',
+               estadoAudio: ctx ? ctx.state : 'sin contexto' });
+      refrescarLog();
+    });
+
+    // Reproduce la alarma por el mismo camino que la estrategia E: un archivo de audio.
+    // Si esta suena y la de Web Audio no, ya sabemos por dónde va el problema.
+    $('btnProbarAlarma').addEventListener('click', function () {
+      var a = new Audio(wavSilencioMasAlarma(0));
+      a.volume = 1;
+      a.play().then(function () {
+        anotar({ tipo: 'prueba_alarma', via: 'elemento <audio> (el mismo camino que la estrategia E)' });
+        refrescarLog();
+      }).catch(function (e) {
+        anotar({ tipo: 'error', detalle: 'No se pudo reproducir la alarma de prueba: ' + e.message });
+        refrescarLog();
+      });
+    });
     $('btnExportar').addEventListener('click', exportarArchivo);
     $('btnCopiar').addEventListener('click', copiarPortapapeles);
     $('btnRefrescar').addEventListener('click', function () { refrescarCapacidades(); refrescarLog(); });
