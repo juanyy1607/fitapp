@@ -195,7 +195,11 @@ servidor.listen(0, '127.0.0.1', async () => {
   }
 
   // Todo archivo servible que no esté en la lista no va a estar disponible sin señal.
-  const enDisco = ['index.html', 'styles.css', 'app.js', 'db.js', 'manifest.webmanifest'];
+  const enDisco = ['index.html', 'styles.css', 'app.js', 'db.js', 'manifest.webmanifest',
+    'tipos.js',
+    'datos/reglas.json', 'datos/ejercicios.json', 'datos/rutinas.json',
+    'logica/progresion.js', 'logica/historial.js', 'logica/almacen.js',
+    'logica/catalogo.js', 'logica/respaldo.js'];
   const olvidados = enDisco.filter((f) => !lista.includes('./' + f));
   if (olvidados.length) olvidados.forEach((f) => mal(`${f} no está en la lista de precarga: no va a andar sin señal`));
   else bien('todos los archivos de la app están en la lista de precarga');

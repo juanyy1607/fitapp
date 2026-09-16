@@ -15,8 +15,11 @@
  */
 importScripts('db.js');
 
-var CACHE = 'banco-timer-v1';
+var CACHE = 'banco-timer-v2';
 
+// Todo lo que tiene que estar guardado para que la app abra sin señal. Si agregás un
+// archivo a la app y NO lo ponés acá, va a andar en tu casa y fallar en el gimnasio.
+// tools/verificar.mjs revisa que no falte ninguno.
 var ARCHIVOS = [
   './',
   './index.html',
@@ -27,7 +30,20 @@ var ARCHIVOS = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-180.png',
-  './icons/icon-maskable-512.png'
+  './icons/icon-maskable-512.png',
+
+  // Datos de entrenamiento: sin esto no hay rutinas offline.
+  './datos/reglas.json',
+  './datos/ejercicios.json',
+  './datos/rutinas.json',
+
+  // Lógica de la app. Los archivos .test.js quedan afuera a propósito: son de desarrollo.
+  './tipos.js',
+  './logica/progresion.js',
+  './logica/historial.js',
+  './logica/almacen.js',
+  './logica/catalogo.js',
+  './logica/respaldo.js'
 ];
 
 // ---------------------------------------------------------------- ciclo de vida
