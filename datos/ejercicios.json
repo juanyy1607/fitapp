@@ -1,14 +1,319 @@
 [
-  { "id": "sentadilla", "nombre": "Sentadilla con barra", "equipo": "barra", "grupo": "piernas" },
-  { "id": "press-banca", "nombre": "Press de banca", "equipo": "barra", "grupo": "pecho" },
-  { "id": "remo-barra", "nombre": "Remo con barra", "equipo": "barra", "grupo": "espalda" },
-  { "id": "peso-muerto", "nombre": "Peso muerto", "equipo": "barra", "grupo": "espalda" },
-  { "id": "press-militar", "nombre": "Press militar de pie", "equipo": "barra", "grupo": "hombros" },
-  { "id": "press-inclinado-mancuernas", "nombre": "Press inclinado con mancuernas", "equipo": "mancuernas", "grupo": "pecho" },
-  { "id": "curl-mancuernas", "nombre": "Curl de bíceps con mancuernas", "equipo": "mancuernas", "grupo": "brazos" },
-  { "id": "elevaciones-laterales", "nombre": "Elevaciones laterales", "equipo": "mancuernas", "grupo": "hombros" },
-  { "id": "prensa", "nombre": "Prensa de piernas", "equipo": "maquina", "grupo": "piernas" },
-  { "id": "jalon-al-pecho", "nombre": "Jalón al pecho", "equipo": "polea", "grupo": "espalda" },
-  { "id": "triceps-polea", "nombre": "Extensión de tríceps en polea", "equipo": "polea", "grupo": "brazos" },
-  { "id": "plancha", "nombre": "Plancha abdominal", "equipo": "peso-corporal", "grupo": "core" }
+  {
+    "id": "sentadilla",
+    "nombre": "Sentadilla con barra",
+    "nombreAlternativo": "Sentadilla trasera",
+    "equipo": "barra",
+    "grupo": "piernas",
+    "musculosSecundarios": [
+      "glúteos",
+      "core"
+    ],
+    "nivel": "principiante",
+    "esUnilateral": false,
+    "esPesoCorporal": false,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 20,
+    "sustitutos": [
+      "prensa"
+    ],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": ""
+  },
+  {
+    "id": "press-banca",
+    "nombre": "Press de banca",
+    "nombreAlternativo": "Press plano",
+    "equipo": "barra",
+    "grupo": "pecho",
+    "musculosSecundarios": [
+      "tríceps",
+      "hombros"
+    ],
+    "nivel": "principiante",
+    "esUnilateral": false,
+    "esPesoCorporal": false,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 20,
+    "sustitutos": [
+      "press-inclinado-mancuernas"
+    ],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": ""
+  },
+  {
+    "id": "remo-barra",
+    "nombre": "Remo con barra",
+    "nombreAlternativo": "",
+    "equipo": "barra",
+    "grupo": "espalda",
+    "musculosSecundarios": [
+      "bíceps",
+      "core"
+    ],
+    "nivel": "principiante",
+    "esUnilateral": false,
+    "esPesoCorporal": false,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 20,
+    "sustitutos": [
+      "jalon-al-pecho"
+    ],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": ""
+  },
+  {
+    "id": "peso-muerto",
+    "nombre": "Peso muerto",
+    "nombreAlternativo": "",
+    "equipo": "barra",
+    "grupo": "espalda",
+    "musculosSecundarios": [
+      "glúteos",
+      "piernas",
+      "core"
+    ],
+    "nivel": "intermedio",
+    "esUnilateral": false,
+    "esPesoCorporal": false,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 40,
+    "sustitutos": [],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": ""
+  },
+  {
+    "id": "press-militar",
+    "nombre": "Press militar de pie",
+    "nombreAlternativo": "Press de hombros con barra",
+    "equipo": "barra",
+    "grupo": "hombros",
+    "musculosSecundarios": [
+      "tríceps",
+      "core"
+    ],
+    "nivel": "intermedio",
+    "esUnilateral": false,
+    "esPesoCorporal": false,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 20,
+    "sustitutos": [
+      "elevaciones-laterales"
+    ],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": ""
+  },
+  {
+    "id": "press-inclinado-mancuernas",
+    "nombre": "Press inclinado con mancuernas",
+    "nombreAlternativo": "",
+    "equipo": "mancuernas",
+    "grupo": "pecho",
+    "musculosSecundarios": [
+      "tríceps",
+      "hombros"
+    ],
+    "nivel": "principiante",
+    "esUnilateral": true,
+    "esPesoCorporal": false,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 10,
+    "sustitutos": [
+      "press-banca"
+    ],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": ""
+  },
+  {
+    "id": "curl-mancuernas",
+    "nombre": "Curl de bíceps con mancuernas",
+    "nombreAlternativo": "",
+    "equipo": "mancuernas",
+    "grupo": "brazos",
+    "musculosSecundarios": [
+      "antebrazos"
+    ],
+    "nivel": "principiante",
+    "esUnilateral": true,
+    "esPesoCorporal": false,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 8,
+    "sustitutos": [],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": ""
+  },
+  {
+    "id": "elevaciones-laterales",
+    "nombre": "Elevaciones laterales",
+    "nombreAlternativo": "",
+    "equipo": "mancuernas",
+    "grupo": "hombros",
+    "musculosSecundarios": [],
+    "nivel": "principiante",
+    "esUnilateral": true,
+    "esPesoCorporal": false,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 4,
+    "sustitutos": [],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": ""
+  },
+  {
+    "id": "prensa",
+    "nombre": "Prensa de piernas",
+    "nombreAlternativo": "",
+    "equipo": "maquina",
+    "grupo": "piernas",
+    "musculosSecundarios": [
+      "glúteos"
+    ],
+    "nivel": "principiante",
+    "esUnilateral": false,
+    "esPesoCorporal": false,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 40,
+    "sustitutos": [
+      "sentadilla"
+    ],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": ""
+  },
+  {
+    "id": "jalon-al-pecho",
+    "nombre": "Jalón al pecho",
+    "nombreAlternativo": "",
+    "equipo": "polea",
+    "grupo": "espalda",
+    "musculosSecundarios": [
+      "bíceps"
+    ],
+    "nivel": "principiante",
+    "esUnilateral": false,
+    "esPesoCorporal": false,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 25,
+    "sustitutos": [
+      "dominadas-asistidas"
+    ],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": ""
+  },
+  {
+    "id": "triceps-polea",
+    "nombre": "Extensión de tríceps en polea",
+    "nombreAlternativo": "",
+    "equipo": "polea",
+    "grupo": "brazos",
+    "musculosSecundarios": [],
+    "nivel": "principiante",
+    "esUnilateral": false,
+    "esPesoCorporal": false,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 15,
+    "sustitutos": [],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": ""
+  },
+  {
+    "id": "plancha",
+    "nombre": "Plancha abdominal",
+    "nombreAlternativo": "",
+    "equipo": "peso-corporal",
+    "grupo": "core",
+    "musculosSecundarios": [
+      "hombros"
+    ],
+    "nivel": "principiante",
+    "esUnilateral": false,
+    "esPesoCorporal": true,
+    "admiteLastre": false,
+    "admiteAsistencia": false,
+    "pesoInicialKg": null,
+    "sustitutos": [],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": "Las repeticiones se registran en segundos."
+  },
+  {
+    "id": "dominadas",
+    "nombre": "Dominadas",
+    "nombreAlternativo": "Pull ups",
+    "equipo": "lastre",
+    "grupo": "espalda",
+    "musculosSecundarios": [
+      "bíceps",
+      "core"
+    ],
+    "nivel": "intermedio",
+    "esUnilateral": false,
+    "esPesoCorporal": true,
+    "admiteLastre": true,
+    "admiteAsistencia": false,
+    "pesoInicialKg": 0,
+    "sustitutos": [
+      "dominadas-asistidas",
+      "jalon-al-pecho"
+    ],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": "El peso que se registra son los kilos AGREGADOS. 0 = solo peso corporal."
+  },
+  {
+    "id": "dominadas-asistidas",
+    "nombre": "Dominadas asistidas",
+    "nombreAlternativo": "Dominadas en máquina o con banda",
+    "equipo": "asistencia",
+    "grupo": "espalda",
+    "musculosSecundarios": [
+      "bíceps"
+    ],
+    "nivel": "principiante",
+    "esUnilateral": false,
+    "esPesoCorporal": true,
+    "admiteLastre": false,
+    "admiteAsistencia": true,
+    "pesoInicialKg": 30,
+    "sustitutos": [
+      "jalon-al-pecho"
+    ],
+    "tecnica": "",
+    "erroresComunes": "",
+    "imagen": "",
+    "notas": "El peso que se registra son los kilos de AYUDA. Progresar es BAJARLOS. Al llegar a 0, pasás a dominadas."
+  }
 ]

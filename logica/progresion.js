@@ -4,22 +4,33 @@
  *
  * Es el único lugar del proyecto donde un error es INVISIBLE. Si una pantalla se rompe,
  * la ves. Si esto sugiere 42,5 kg donde correspondían 45, entrenás seis semanas mal y no
- * te enterás nunca. Por eso está separado en su propio archivo, no toca la pantalla ni la
- * base de datos, y tiene tests: `node --test`.
+ * te enterás nunca. Por eso está separado, no toca la pantalla ni la base, y tiene tests.
  *
  * El esquema es "doble progresión", y los números los pone el socio en datos/reglas.json:
  *   1. Te quedás con el mismo peso hasta llegar al techo de repeticiones en TODAS las series.
  *   2. Cuando lo lográs, sube el peso y volvés al piso de repeticiones.
  *   3. Si te estancás varias sesiones seguidas, baja el peso y volvés a subir desde ahí.
  *
- * Acá no hay nada escrito sobre entrenamiento: solo se aplica lo que dicen los datos.
+ * Dos cosas que hay que tener presentes al leer este archivo:
+ *
+ * · **La subida es en kilos absolutos, no en porcentaje.** Un porcentaje mentía: con 2,5%
+ *   sobre 60 kg el salto da 1,5 kg, menos que el disco más chico, así que el redondeo se
+ *   lo comía y el parámetro no hacía nada hasta los 100 kg. El socio habría creído que lo
+ *   regulaba sin que pasara nada.
+ *
+ * · **En los ejercicios asistidos, progresar es BAJAR el número.** Los kilos que registra
+ *   el usuario en dominadas asistidas son los kilos de AYUDA de la máquina. Menos ayuda es
+ *   mejor. Si esto se escribe mal, la app le dice a alguien que está mejorando que se
+ *   ponga más ayuda, y nadie se da cuenta nunca.
  */
 
 /** @typedef {import('../tipos.js').Equipo} Equipo */
 /** @typedef {import('../tipos.js').Reglas} Reglas */
+/** @typedef {import('../tipos.js').Ejercicio} Ejercicio */
 /** @typedef {import('../tipos.js').EjercicioPlanificado} EjercicioPlanificado */
 /** @typedef {import('../tipos.js').IntentoEjercicio} IntentoEjercicio */
 /** @typedef {import('../tipos.js').Sugerencia} Sugerencia */
+/** @typedef {import('../tipos.js').ModoCarga} ModoCarga */
 
 /**
  * Redondea a dos decimales.
@@ -31,6 +42,39 @@
  */
 export function redondear2(n) {
   return Math.round(n * 100) / 100;
+}
+
+/**
+ * Cómo hay que leer el número de kilos de este ejercicio.
+ *
+ * No está en la planilla: se deduce de las casillas que marca el socio. Si marcó las dos
+ * (lastre y asistencia), gana asistencia y el validador se lo hace notar, porque un solo
+ * número no puede significar las dos cosas a la vez.
+ * @param {Ejercicio} ejercicio
+ * @returns {ModoCarga}
+ */
+export function modoDeCarga(ejercicio) {
+  if (ejercicio.admiteAsistencia) return 'asistencia';
+  if (ejercicio.admiteLastre) return 'lastre';
+  if (ejercicio.esPesoCorporal) return 'peso-corporal';
+  return 'peso';
+}
+
+/**
+ * Con cuánto arrancar la primera vez.
+ *
+ * El valor vive en el ejercicio, porque es propiedad del ejercicio y no de la rutina: si
+ * estuviera en cada rutina, el mismo ejercicio podría tener tres pesos iniciales distintos
+ * sin que nadie se entere. La rutina lo puede pisar, pero tiene que decirlo explícitamente.
+ * @param {Ejercicio} ejercicio
+ * @param {EjercicioPlanificado} plan
+ * @returns {number|null}
+ */
+export function pesoInicialDe(ejercicio, plan) {
+  if (Object.prototype.hasOwnProperty.call(plan, 'pesoInicialKg')) {
+    return plan.pesoInicialKg === undefined ? null : plan.pesoInicialKg;
+  }
+  return ejercicio.pesoInicialKg === undefined ? null : ejercicio.pesoInicialKg;
 }
 
 /**
@@ -72,9 +116,9 @@ export function completoElRango(reps, plan) {
  * Cuántas sesiones seguidas viene fallando CON EL MISMO PESO, contando desde la más
  * reciente hacia atrás.
  *
- * Que sea "con el mismo peso" resuelve solo un caso complicado: si el usuario bajó el
- * peso por su cuenta, la cuenta se reinicia. No arrastramos los fracasos que tuvo con una
- * carga más pesada, porque ya no está intentando esa carga.
+ * Que sea "con el mismo peso" resuelve solo un caso complicado: si el usuario cambió la
+ * carga por su cuenta, la cuenta se reinicia. No arrastramos los fracasos que tuvo con
+ * otra carga, porque ya no está intentando esa.
  *
  * @param {IntentoEjercicio[]} historial  Del más reciente al más viejo.
  * @param {EjercicioPlanificado} plan
@@ -96,32 +140,44 @@ export function fallosSeguidos(historial, plan) {
  * La función principal: qué peso y qué repeticiones sugerirle al usuario.
  *
  * @param {IntentoEjercicio[]} historial  Del más reciente al más viejo. Vacío = primera vez.
- * @param {EjercicioPlanificado} plan     Lo que pide la rutina para este ejercicio.
- * @param {string} claveEquipo            La clave del equipo, sale del catálogo de ejercicios.
+ * @param {EjercicioPlanificado} plan     Lo que pide la rutina.
+ * @param {Ejercicio} ejercicio           La ficha del ejercicio (equipo, modo, peso inicial).
  * @param {Reglas} reglas                 El contenido de datos/reglas.json.
  * @returns {Sugerencia}
  */
-export function sugerirCarga(historial, plan, claveEquipo, reglas) {
+export function sugerirCarga(historial, plan, ejercicio, reglas) {
   /** @type {string|undefined} */
   let advertencia;
+  const modo = modoDeCarga(ejercicio);
 
-  let equipo = reglas.equipos[claveEquipo];
+  let equipo = reglas.equipos[ejercicio.equipo];
   if (!equipo) {
     // No reventamos en el medio del gimnasio por un dato mal cargado: suponemos saltos de
     // 1 kg y lo dejamos dicho. tools/validar-datos.mjs tendría que haberlo agarrado antes.
-    advertencia = 'El equipo "' + claveEquipo + '" no está en reglas.json. Se supusieron saltos de 1 kg.';
-    equipo = { nombre: claveEquipo, incrementoMinimoKg: 1, pesoBaseKg: 0 };
+    advertencia = 'El equipo "' + ejercicio.equipo + '" no está en reglas.json. Se supusieron saltos de 1 kg.';
+    equipo = { nombre: ejercicio.equipo, incrementoMinimoKg: 1, pesoBaseKg: 0, subirKg: 1 };
   }
+
+  const incremento = equipo.incrementoMinimoKg || 0;
+  const subirKg = equipo.subirKg || incremento;
+
+  // En los asistidos el progreso va para abajo: menos ayuda es mejor. Este signo es lo
+  // único que separa "te está yendo bien" de "ponete más ayuda".
+  const sentido = modo === 'asistencia' ? -1 : 1;
 
   // --- Primera vez: no hay nada que calcular.
   if (!historial || historial.length === 0) {
+    const inicial = pesoInicialDe(ejercicio, plan);
     return {
-      pesoKg: plan.pesoInicialKg,
+      pesoKg: inicial,
       repsObjetivo: plan.repsMin,
       motivo: 'primera-vez',
-      explicacion: plan.pesoInicialKg === null
+      modo,
+      explicacion: inicial === null
         ? 'Primera vez con este ejercicio: elegí un peso con el que llegues cómodo a ' + plan.repsMin + ' repeticiones.'
-        : 'Primera vez con este ejercicio: arrancá con ' + plan.pesoInicialKg + ' kg y apuntá a ' + plan.repsMin + ' repeticiones.',
+        : modo === 'asistencia'
+          ? 'Primera vez: arrancá con ' + inicial + ' kg de ayuda y apuntá a ' + plan.repsMin + ' repeticiones.'
+          : 'Primera vez con este ejercicio: arrancá con ' + inicial + ' kg y apuntá a ' + plan.repsMin + ' repeticiones.',
       advertencia
     };
   }
@@ -129,82 +185,114 @@ export function sugerirCarga(historial, plan, claveEquipo, reglas) {
   const ultimo = historial[0];
   const anterior = historial[1];
 
-  // --- Completó el rango: sube el peso.
+  // --- Completó el rango: le toca progresar.
   if (completoElRango(ultimo.reps, plan)) {
-    const objetivo = ultimo.pesoKg * (1 + reglas.progresion.subirPorcentaje / 100);
-    let nuevo = redondearACargaPosible(objetivo, equipo);
-
-    // Caso borde importante: si el porcentaje da un salto MÁS CHICO que el incremento más
-    // chico del equipo, el redondeo devuelve el mismo peso de siempre y el usuario queda
-    // trabado para siempre. Con 40 kg y 2,5%, el objetivo es 41 y redondea a 40. Acá lo
-    // empujamos al primer peso que sí se puede armar.
-    if (nuevo <= ultimo.pesoKg) {
-      nuevo = redondearACargaPosible(ultimo.pesoKg + (equipo.incrementoMinimoKg || 0), equipo);
-    }
-
-    // Peso corporal: no hay peso que subir, se progresa con repeticiones.
-    if (!equipo.incrementoMinimoKg || equipo.incrementoMinimoKg <= 0) {
+    // Peso corporal sin lastre: no hay kilos que mover, se progresa con repeticiones.
+    if (modo === 'peso-corporal' || incremento <= 0) {
       return {
         pesoKg: ultimo.pesoKg,
         repsObjetivo: plan.repsMax,
         motivo: 'subir',
+        modo,
         explicacion: 'Completaste el rango. Como es peso corporal, el próximo paso es sumar repeticiones.',
         advertencia
       };
     }
 
+    // Asistido y ya sin ayuda: no se puede bajar de cero. Toca cambiar de ejercicio.
+    if (modo === 'asistencia' && ultimo.pesoKg <= 0) {
+      const siguiente = (ejercicio.sustitutos || [])[0];
+      return {
+        pesoKg: 0,
+        repsObjetivo: plan.repsMax,
+        motivo: 'mantener',
+        modo,
+        explicacion: 'Ya lo estás haciendo sin nada de ayuda. ' +
+                     (siguiente ? 'Pasá a la versión sin asistencia.' : 'Sumá repeticiones.'),
+        advertencia
+      };
+    }
+
+    let nuevo = redondearACargaPosible(ultimo.pesoKg + sentido * subirKg, equipo);
+
+    // Caso borde importante: si el redondeo devuelve el mismo peso de siempre, el usuario
+    // queda trabado para siempre sin que nada falle. Lo empujamos un escalón.
+    if (sentido > 0 && nuevo <= ultimo.pesoKg) nuevo = redondearACargaPosible(ultimo.pesoKg + incremento, equipo);
+    if (sentido < 0 && nuevo >= ultimo.pesoKg) nuevo = redondearACargaPosible(ultimo.pesoKg - incremento, equipo);
+    if (nuevo < 0) nuevo = 0;
+
     return {
       pesoKg: nuevo,
       repsObjetivo: plan.repsMin,
       motivo: 'subir',
-      explicacion: 'Completaste ' + plan.repsMax + ' repeticiones en las ' + plan.series +
-                   ' series con ' + ultimo.pesoKg + ' kg. Subí a ' + nuevo + ' kg y volvé a ' + plan.repsMin + '.',
+      modo,
+      explicacion: modo === 'asistencia'
+        ? 'Completaste ' + plan.repsMax + ' repeticiones con ' + ultimo.pesoKg + ' kg de ayuda. ' +
+          'Bajá la ayuda a ' + nuevo + ' kg y volvé a ' + plan.repsMin + '.'
+        : 'Completaste ' + plan.repsMax + ' repeticiones en las ' + plan.series + ' series con ' +
+          ultimo.pesoKg + ' kg. Subí a ' + nuevo + ' kg y volvé a ' + plan.repsMin + '.',
       advertencia
     };
   }
 
-  // --- Bajó el peso por su cuenta desde la sesión anterior: lo respetamos.
-  if (anterior && ultimo.pesoKg < anterior.pesoKg) {
+  // --- Retrocedió por su cuenta desde la sesión anterior: lo respetamos.
+  // Ojo con el signo: en asistidos, retroceder es SUBIR los kilos de ayuda.
+  const retrocedio = anterior && (sentido > 0
+    ? ultimo.pesoKg < anterior.pesoKg
+    : ultimo.pesoKg > anterior.pesoKg);
+
+  if (retrocedio) {
     return {
       pesoKg: ultimo.pesoKg,
       repsObjetivo: plan.repsMax,
       motivo: 'bajaste-el-peso',
-      explicacion: 'La última vez bajaste a ' + ultimo.pesoKg + ' kg. Quedate ahí hasta llegar a ' +
-                   plan.repsMax + ' repeticiones en las ' + plan.series + ' series.',
+      modo,
+      explicacion: modo === 'asistencia'
+        ? 'La última vez subiste la ayuda a ' + ultimo.pesoKg + ' kg. Quedate ahí hasta llegar a ' +
+          plan.repsMax + ' repeticiones en las ' + plan.series + ' series.'
+        : 'La última vez bajaste a ' + ultimo.pesoKg + ' kg. Quedate ahí hasta llegar a ' +
+          plan.repsMax + ' repeticiones en las ' + plan.series + ' series.',
       advertencia
     };
   }
 
-  // --- Se estancó demasiadas veces seguidas: baja el peso para volver a arrancar.
+  // --- Se estancó demasiadas veces seguidas: aflojamos la carga para volver a arrancar.
   const fallos = fallosSeguidos(historial, plan);
-  if (fallos >= reglas.progresion.sesionesFallidasParaBajar) {
-    const objetivo = ultimo.pesoKg * (1 - reglas.progresion.bajarPorcentaje / 100);
-    let nuevo = redondearACargaPosible(objetivo, equipo);
+  if (fallos >= reglas.progresion.sesionesFallidasParaBajar && incremento > 0) {
+    // El deload sí es porcentual, y acá el porcentaje no miente: a cualquier carga
+    // razonable, un 10% da más que el disco más chico. Igual ponemos un piso de un
+    // escalón para que no se quede en cero cuando la carga es muy baja.
+    const magnitud = Math.max(Math.abs(ultimo.pesoKg) * reglas.progresion.bajarPorcentaje / 100, incremento);
+    let nuevo = redondearACargaPosible(ultimo.pesoKg - sentido * magnitud, equipo);
 
-    // Misma trampa que al subir, pero al revés: si el redondeo no baja nada, forzamos un
-    // escalón para abajo. Y nunca por debajo del piso (una barra vacía ya pesa 20 kg).
-    if (nuevo >= ultimo.pesoKg && equipo.incrementoMinimoKg > 0) {
-      nuevo = redondearACargaPosible(ultimo.pesoKg - equipo.incrementoMinimoKg, equipo);
-    }
+    if (sentido > 0 && nuevo >= ultimo.pesoKg) nuevo = redondearACargaPosible(ultimo.pesoKg - incremento, equipo);
+    if (sentido < 0 && nuevo <= ultimo.pesoKg) nuevo = redondearACargaPosible(ultimo.pesoKg + incremento, equipo);
     if (nuevo < equipo.pesoBaseKg) nuevo = equipo.pesoBaseKg;
 
     return {
       pesoKg: nuevo,
       repsObjetivo: plan.repsMin,
       motivo: 'bajar',
-      explicacion: 'Van ' + fallos + ' sesiones con ' + ultimo.pesoKg + ' kg sin completar el rango. ' +
-                   'Bajá a ' + nuevo + ' kg y volvé a subir desde ahí.',
+      modo,
+      explicacion: modo === 'asistencia'
+        ? 'Van ' + fallos + ' sesiones con ' + ultimo.pesoKg + ' kg de ayuda sin completar el rango. ' +
+          'Subí la ayuda a ' + nuevo + ' kg y volvé a bajarla desde ahí.'
+        : 'Van ' + fallos + ' sesiones con ' + ultimo.pesoKg + ' kg sin completar el rango. ' +
+          'Bajá a ' + nuevo + ' kg y volvé a subir desde ahí.',
       advertencia
     };
   }
 
-  // --- Caso normal: sigue con el mismo peso hasta completar el rango.
+  // --- Caso normal: sigue igual hasta completar el rango.
   return {
     pesoKg: ultimo.pesoKg,
     repsObjetivo: plan.repsMax,
     motivo: 'mantener',
-    explicacion: 'Seguí con ' + ultimo.pesoKg + ' kg. Te falta llegar a ' + plan.repsMax +
-                 ' repeticiones en las ' + plan.series + ' series.',
+    modo,
+    explicacion: modo === 'asistencia'
+      ? 'Seguí con ' + ultimo.pesoKg + ' kg de ayuda. Te falta llegar a ' + plan.repsMax + ' repeticiones.'
+      : 'Seguí con ' + ultimo.pesoKg + ' kg. Te falta llegar a ' + plan.repsMax +
+        ' repeticiones en las ' + plan.series + ' series.',
     advertencia
   };
 }

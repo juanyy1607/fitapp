@@ -1,36 +1,66 @@
 {
-  "version": 1,
+  "version": 2,
+  "provisorio": true,
   "descansoPorDefectoSeg": 90,
+  "descansoEntreEjerciciosSeg": 120,
   "progresion": {
-    "subirPorcentaje": 2.5,
     "bajarPorcentaje": 10,
     "sesionesFallidasParaBajar": 2
   },
   "equipos": {
     "barra": {
-      "nombre": "Barra",
+      "nombre": "Barra olímpica",
       "incrementoMinimoKg": 2.5,
-      "pesoBaseKg": 20
+      "pesoBaseKg": 20,
+      "subirKg": 2.5
+    },
+    "barra-liviana": {
+      "nombre": "Barra liviana",
+      "incrementoMinimoKg": 2.5,
+      "pesoBaseKg": 10,
+      "subirKg": 2.5
+    },
+    "barra-tecnica": {
+      "nombre": "Barra técnica",
+      "incrementoMinimoKg": 1,
+      "pesoBaseKg": 7.5,
+      "subirKg": 1
     },
     "mancuernas": {
       "nombre": "Mancuernas",
       "incrementoMinimoKg": 2,
-      "pesoBaseKg": 0
+      "pesoBaseKg": 0,
+      "subirKg": 2
     },
     "maquina": {
       "nombre": "Máquina",
       "incrementoMinimoKg": 5,
-      "pesoBaseKg": 0
+      "pesoBaseKg": 0,
+      "subirKg": 5
     },
     "polea": {
       "nombre": "Polea",
       "incrementoMinimoKg": 2.5,
-      "pesoBaseKg": 0
+      "pesoBaseKg": 0,
+      "subirKg": 2.5
     },
     "peso-corporal": {
       "nombre": "Peso corporal",
       "incrementoMinimoKg": 0,
-      "pesoBaseKg": 0
+      "pesoBaseKg": 0,
+      "subirKg": 0
+    },
+    "lastre": {
+      "nombre": "Lastre (disco o cinturón)",
+      "incrementoMinimoKg": 1.25,
+      "pesoBaseKg": 0,
+      "subirKg": 1.25
+    },
+    "asistencia": {
+      "nombre": "Asistencia (máquina o banda)",
+      "incrementoMinimoKg": 5,
+      "pesoBaseKg": 0,
+      "subirKg": 5
     }
   }
 }

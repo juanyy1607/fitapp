@@ -20,7 +20,7 @@ import assert from 'node:assert/strict';
 describe('todos los módulos cargan y exportan lo que dicen', () => {
   test('progresion.js', async () => {
     const m = await import('./progresion.js');
-    for (const nombre of ['sugerirCarga', 'redondearACargaPosible', 'completoElRango', 'fallosSeguidos', 'redondear2']) {
+    for (const nombre of ['sugerirCarga', 'redondearACargaPosible', 'completoElRango', 'fallosSeguidos', 'redondear2', 'modoDeCarga', 'pesoInicialDe']) {
       assert.equal(typeof m[nombre], 'function', 'falta exportar ' + nombre);
     }
   });
@@ -43,7 +43,7 @@ describe('todos los módulos cargan y exportan lo que dicen', () => {
 
   test('catalogo.js (se importa, no se ejecuta: necesita fetch)', async () => {
     const m = await import('./catalogo.js');
-    for (const nombre of ['cargarCatalogo', 'nombreDeEjercicio', 'equipoDeEjercicio', 'buscarDia', 'descansoDe']) {
+    for (const nombre of ['cargarCatalogo', 'nombreDeEjercicio', 'equipoDeEjercicio', 'buscarDia', 'descansoDe', 'descansoDespuesDe']) {
       assert.equal(typeof m[nombre], 'function', 'falta exportar ' + nombre);
     }
   });

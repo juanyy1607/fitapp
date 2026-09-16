@@ -105,7 +105,7 @@ export function buscarDia(catalogo, rutinaId, diaId) {
 }
 
 /**
- * Los segundos de descanso de un ejercicio planificado, con el valor por defecto de
+ * Segundos de descanso ENTRE SERIES del mismo ejercicio, con el valor por defecto de
  * reglas.json como red por si la fila vino sin ese dato.
  * @param {Catalogo} catalogo
  * @param {EjercicioPlanificado} plan
@@ -113,4 +113,19 @@ export function buscarDia(catalogo, rutinaId, diaId) {
  */
 export function descansoDe(catalogo, plan) {
   return plan.descansoSeg > 0 ? plan.descansoSeg : catalogo.reglas.descansoPorDefectoSeg;
+}
+
+/**
+ * Segundos de descanso al TERMINAR un ejercicio, antes de pasar al siguiente.
+ *
+ * Es un descanso distinto y más largo que el de entre series: cambiás de aparato, capás
+ * que tenés que esperar que se desocupe, y el músculo que viene es otro. Antes esto no
+ * existía y el usuario quedaba con el descanso corto entre ejercicios distintos.
+ * @param {Catalogo} catalogo
+ * @param {EjercicioPlanificado} plan
+ * @returns {number}
+ */
+export function descansoDespuesDe(catalogo, plan) {
+  if (plan.descansoDespuesSeg && plan.descansoDespuesSeg > 0) return plan.descansoDespuesSeg;
+  return catalogo.reglas.descansoEntreEjerciciosSeg || catalogo.reglas.descansoPorDefectoSeg;
 }

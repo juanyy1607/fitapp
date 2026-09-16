@@ -8,30 +8,109 @@
         "id": "a",
         "nombre": "Día A",
         "ejercicios": [
-          { "ejercicioId": "sentadilla", "series": 3, "repsMin": 8, "repsMax": 12, "descansoSeg": 120, "pesoInicialKg": 20 },
-          { "ejercicioId": "press-banca", "series": 3, "repsMin": 8, "repsMax": 12, "descansoSeg": 120, "pesoInicialKg": 20 },
-          { "ejercicioId": "remo-barra", "series": 3, "repsMin": 8, "repsMax": 12, "descansoSeg": 90, "pesoInicialKg": 20 },
-          { "ejercicioId": "plancha", "series": 3, "repsMin": 20, "repsMax": 45, "descansoSeg": 60, "pesoInicialKg": null }
+          {
+            "ejercicioId": "sentadilla",
+            "series": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "descansoSeg": 120
+          },
+          {
+            "ejercicioId": "press-banca",
+            "series": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "descansoSeg": 120
+          },
+          {
+            "ejercicioId": "remo-barra",
+            "series": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "descansoSeg": 90
+          },
+          {
+            "ejercicioId": "plancha",
+            "series": 3,
+            "repsMin": 20,
+            "repsMax": 45,
+            "descansoSeg": 60
+          }
         ]
       },
       {
         "id": "b",
         "nombre": "Día B",
         "ejercicios": [
-          { "ejercicioId": "peso-muerto", "series": 3, "repsMin": 6, "repsMax": 10, "descansoSeg": 150, "pesoInicialKg": 40 },
-          { "ejercicioId": "press-militar", "series": 3, "repsMin": 8, "repsMax": 12, "descansoSeg": 120, "pesoInicialKg": 20 },
-          { "ejercicioId": "jalon-al-pecho", "series": 3, "repsMin": 10, "repsMax": 15, "descansoSeg": 90, "pesoInicialKg": 25 },
-          { "ejercicioId": "curl-mancuernas", "series": 3, "repsMin": 10, "repsMax": 15, "descansoSeg": 60, "pesoInicialKg": 8 }
+          {
+            "ejercicioId": "peso-muerto",
+            "series": 3,
+            "repsMin": 6,
+            "repsMax": 10,
+            "descansoSeg": 150
+          },
+          {
+            "ejercicioId": "press-militar",
+            "series": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "descansoSeg": 120
+          },
+          {
+            "ejercicioId": "jalon-al-pecho",
+            "series": 3,
+            "repsMin": 10,
+            "repsMax": 15,
+            "descansoSeg": 90
+          },
+          {
+            "ejercicioId": "curl-mancuernas",
+            "series": 3,
+            "repsMin": 10,
+            "repsMax": 15,
+            "descansoSeg": 60
+          },
+          {
+            "ejercicioId": "dominadas-asistidas",
+            "series": 3,
+            "repsMin": 6,
+            "repsMax": 10,
+            "descansoSeg": 120
+          }
         ]
       },
       {
         "id": "c",
         "nombre": "Día C",
         "ejercicios": [
-          { "ejercicioId": "prensa", "series": 3, "repsMin": 10, "repsMax": 15, "descansoSeg": 120, "pesoInicialKg": 40 },
-          { "ejercicioId": "press-inclinado-mancuernas", "series": 3, "repsMin": 8, "repsMax": 12, "descansoSeg": 90, "pesoInicialKg": 10 },
-          { "ejercicioId": "elevaciones-laterales", "series": 3, "repsMin": 12, "repsMax": 20, "descansoSeg": 60, "pesoInicialKg": 4 },
-          { "ejercicioId": "triceps-polea", "series": 3, "repsMin": 10, "repsMax": 15, "descansoSeg": 60, "pesoInicialKg": 15 }
+          {
+            "ejercicioId": "prensa",
+            "series": 3,
+            "repsMin": 10,
+            "repsMax": 15,
+            "descansoSeg": 120
+          },
+          {
+            "ejercicioId": "press-inclinado-mancuernas",
+            "series": 3,
+            "repsMin": 8,
+            "repsMax": 12,
+            "descansoSeg": 90
+          },
+          {
+            "ejercicioId": "elevaciones-laterales",
+            "series": 3,
+            "repsMin": 12,
+            "repsMax": 20,
+            "descansoSeg": 60
+          },
+          {
+            "ejercicioId": "triceps-polea",
+            "series": 3,
+            "repsMin": 10,
+            "repsMax": 15,
+            "descansoSeg": 60
+          }
         ]
       }
     ]

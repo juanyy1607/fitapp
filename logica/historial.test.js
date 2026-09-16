@@ -27,6 +27,10 @@ import { sugerirCarga } from './progresion.js';
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 /** @type {Reglas} */
 const reglas = JSON.parse(readFileSync(join(RAIZ, 'datos/reglas.json'), 'utf8'));
+/** @type {import('../tipos.js').Ejercicio[]} */
+const catalogo = JSON.parse(readFileSync(join(RAIZ, 'datos/ejercicios.json'), 'utf8'));
+const pressBanca = catalogo.find((e) => e.id === 'press-banca');
+if (!pressBanca) throw new Error('falta press-banca en datos/ejercicios.json');
 
 const DIA = 24 * 60 * 60 * 1000;
 const HOY = Date.parse('2026-09-15T18:00:00Z');
@@ -183,24 +187,24 @@ describe('diasEntrenadosEnLosUltimos', () => {
 
 describe('historial + progresión juntos', () => {
   /** @type {EjercicioPlanificado} */
-  const plan = { ejercicioId: 'press-banca', series: 3, repsMin: 8, repsMax: 12, descansoSeg: 120, pesoInicialKg: 20 };
+  const plan = { ejercicioId: 'press-banca', series: 3, repsMin: 8, repsMax: 12, descansoSeg: 120 };
 
   test('una sesión completa hace que la próxima suba el peso', () => {
     const lista = [sesion({ inicioTs: HOY - DIA, series: [['press-banca', 1, 40, 12], ['press-banca', 2, 40, 12], ['press-banca', 3, 40, 12]] })];
-    const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, 'barra', reglas);
+    const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, pressBanca, reglas);
     assert.equal(s.motivo, 'subir');
     assert.equal(s.pesoKg, 42.5);
   });
 
   test('bajar en la última serie NO cuenta como completada', () => {
     const lista = [sesion({ inicioTs: HOY - DIA, series: [['press-banca', 1, 40, 12], ['press-banca', 2, 40, 12], ['press-banca', 3, 35, 12]] })];
-    const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, 'barra', reglas);
+    const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, pressBanca, reglas);
     assert.equal(s.motivo, 'mantener');
     assert.equal(s.pesoKg, 40);
   });
 
   test('sin historial cae en primera vez, no en un error', () => {
-    const s = sugerirCarga(intentosDeEjercicio([], 'press-banca'), plan, 'barra', reglas);
+    const s = sugerirCarga(intentosDeEjercicio([], 'press-banca'), plan, pressBanca, reglas);
     assert.equal(s.motivo, 'primera-vez');
     assert.equal(s.pesoKg, 20);
   });
@@ -210,7 +214,7 @@ describe('historial + progresión juntos', () => {
       sesion({ inicioTs: HOY - 7 * DIA, series: [['press-banca', 1, 40, 9], ['press-banca', 2, 40, 8], ['press-banca', 3, 40, 8]] }),
       sesion({ inicioTs: HOY - 2 * DIA, series: [['press-banca', 1, 40, 10], ['press-banca', 2, 40, 9], ['press-banca', 3, 40, 8]] })
     ];
-    const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, 'barra', reglas);
+    const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, pressBanca, reglas);
     assert.equal(s.motivo, 'bajar');
     assert.equal(s.pesoKg, 35);
   });
@@ -220,7 +224,7 @@ describe('historial + progresión juntos', () => {
       sesion({ inicioTs: HOY - 2 * DIA, series: [['press-banca', 1, 40, 12], ['press-banca', 2, 40, 12], ['press-banca', 3, 40, 12]] }),
       sesion({ inicioTs: HOY, finTs: null, series: [['press-banca', 1, 42.5, 8]] })
     ];
-    const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, 'barra', reglas);
+    const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, pressBanca, reglas);
     assert.equal(s.pesoKg, 42.5, 'tiene que seguir sugiriendo lo mismo mientras entrenás');
   });
 });

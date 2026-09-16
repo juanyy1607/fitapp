@@ -20,11 +20,12 @@ import { fileURLToPath } from 'node:url';
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 let fallas = 0;
+let avisos = 0;
 const mal = (m) => { fallas++; console.log('  \x1b[31mERROR\x1b[0m ' + m); };
+const ojo = (m) => { avisos++; console.log('  \x1b[33mAVISO\x1b[0m ' + m); };
 const bien = (m) => console.log('  \x1b[32mOK\x1b[0m    ' + m);
 const titulo = (t) => console.log('\n\x1b[1m' + t + '\x1b[0m');
 
-/** Lee un JSON y explica el problema en castellano si no se puede. */
 function leerJson(ruta) {
   const completo = join(RAIZ, ruta);
   if (!existsSync(completo)) { mal('falta el archivo ' + ruta); return null; }
@@ -39,20 +40,57 @@ function leerJson(ruta) {
 
 const esNumero = (v) => typeof v === 'number' && Number.isFinite(v);
 const esTexto = (v) => typeof v === 'string' && v.trim().length > 0;
+const esLista = (v) => Array.isArray(v);
+const NIVELES = ['principiante', 'intermedio', 'avanzado'];
+
+/**
+ * ¿Ese peso se puede armar de verdad con ese equipo?
+ * Una barra olímpica sube de a 2,5 kg desde 20, así que 21 kg no existe.
+ */
+function cargaPosible(pesoKg, eq) {
+  if (!eq || !eq.incrementoMinimoKg || eq.incrementoMinimoKg <= 0) return { ok: true };
+  if (pesoKg < eq.pesoBaseKg) {
+    return { ok: false, motivo: 'es menor que el piso de ' + eq.nombre + ' (' + eq.pesoBaseKg + ' kg)' };
+  }
+  const pasos = (pesoKg - eq.pesoBaseKg) / eq.incrementoMinimoKg;
+  if (Math.abs(pasos - Math.round(pasos)) > 0.001) {
+    return {
+      ok: false,
+      motivo: 'no se puede armar con ' + eq.nombre + ', que sube de a ' + eq.incrementoMinimoKg +
+              ' kg desde ' + eq.pesoBaseKg + ' kg'
+    };
+  }
+  return { ok: true };
+}
 
 // ============================================================ reglas.json
 
 titulo('reglas.json');
 
 const reglas = leerJson('datos/reglas.json');
+const fallasAntesDeReglas = fallas;
 
 if (reglas) {
+  if (reglas.provisorio) {
+    ojo('los números de reglas.json están marcados como PROVISORIOS: el socio todavía no los confirmó');
+  }
+
+  // El porcentaje de subida se sacó a propósito: con 2,5% sobre 60 kg el salto daba 1,5 kg,
+  // menos que el disco más chico, así que el redondeo se lo comía y el parámetro no hacía
+  // nada hasta los 100 kg. Si alguien lo vuelve a poner, avisamos.
+  if (reglas.progresion && reglas.progresion.subirPorcentaje !== undefined) {
+    mal('progresion.subirPorcentaje ya no se usa: la subida ahora va en kilos absolutos, ' +
+        'en la columna subirKg de cada equipo. Un porcentaje no hacía nada por debajo de los 100 kg.');
+  }
+
   if (!esNumero(reglas.descansoPorDefectoSeg) || reglas.descansoPorDefectoSeg <= 0) {
     mal('descansoPorDefectoSeg tiene que ser un número de segundos mayor que cero');
   }
+  if (!esNumero(reglas.descansoEntreEjerciciosSeg) || reglas.descansoEntreEjerciciosSeg <= 0) {
+    mal('falta descansoEntreEjerciciosSeg: es el descanso al pasar de un ejercicio al siguiente');
+  }
 
   const p = reglas.progresion || {};
-  if (!esNumero(p.subirPorcentaje) || p.subirPorcentaje <= 0) mal('progresion.subirPorcentaje tiene que ser mayor que cero');
   if (!esNumero(p.bajarPorcentaje) || p.bajarPorcentaje <= 0) mal('progresion.bajarPorcentaje tiene que ser mayor que cero');
   if (!Number.isInteger(p.sesionesFallidasParaBajar) || p.sesionesFallidasParaBajar < 1) {
     mal('progresion.sesionesFallidasParaBajar tiene que ser un número entero de 1 para arriba');
@@ -68,12 +106,17 @@ if (reglas) {
     if (!esNumero(eq.incrementoMinimoKg) || eq.incrementoMinimoKg < 0) {
       mal('el equipo "' + clave + '" tiene un incrementoMinimoKg inválido (tiene que ser 0 o más)');
     }
-    if (!esNumero(eq.pesoBaseKg) || eq.pesoBaseKg < 0) {
-      mal('el equipo "' + clave + '" tiene un pesoBaseKg inválido');
+    if (!esNumero(eq.pesoBaseKg) || eq.pesoBaseKg < 0) mal('el equipo "' + clave + '" tiene un pesoBaseKg inválido');
+
+    if (!esNumero(eq.subirKg) || eq.subirKg < 0) {
+      mal('al equipo "' + clave + '" le falta subirKg (cuántos kilos sumar al completar el rango)');
+    } else if (eq.incrementoMinimoKg > 0 && eq.subirKg > 0 && eq.subirKg < eq.incrementoMinimoKg) {
+      ojo('el equipo "' + clave + '" tiene subirKg (' + eq.subirKg + ') menor que su incremento mínimo (' +
+          eq.incrementoMinimoKg + '): el redondeo lo va a llevar igual a un escalón entero');
     }
   }
 
-  if (fallas === 0) bien(clavesEquipo.length + ' equipos definidos: ' + clavesEquipo.join(', '));
+  if (fallas === fallasAntesDeReglas) bien(clavesEquipo.length + ' equipos: ' + clavesEquipo.join(', '));
 }
 
 // ========================================================= ejercicios.json
@@ -81,7 +124,6 @@ if (reglas) {
 titulo('ejercicios.json');
 
 const ejercicios = leerJson('datos/ejercicios.json');
-/** @type {Set<string>} */
 const idsEjercicio = new Set();
 const fallasAntesDeEjercicios = fallas;
 
@@ -89,22 +131,70 @@ if (ejercicios) {
   if (!Array.isArray(ejercicios)) {
     mal('ejercicios.json tiene que ser una lista, o sea empezar con [ y terminar con ]');
   } else {
+    // Primera pasada: los ids, para poder validar sustitutos después.
+    for (const e of ejercicios) if (esTexto(e.id)) idsEjercicio.add(e.id);
+
     ejercicios.forEach((e, i) => {
       const donde = 'ejercicio ' + (i + 1) + (esTexto(e.id) ? ' ("' + e.id + '")' : '');
-      if (!esTexto(e.id)) mal(donde + ' no tiene id');
-      else if (idsEjercicio.has(e.id)) mal(donde + ' tiene un id repetido: cada ejercicio necesita uno propio');
-      else idsEjercicio.add(e.id);
 
+      if (!esTexto(e.id)) mal(donde + ' no tiene id');
       if (!esTexto(e.nombre)) mal(donde + ' no tiene nombre');
       if (!esTexto(e.grupo)) mal(donde + ' no tiene grupo muscular');
 
+      const repetidos = ejercicios.filter((x) => x.id === e.id);
+      if (esTexto(e.id) && repetidos.length > 1 && repetidos[0] !== e) {
+        mal(donde + ' tiene un id repetido: cada ejercicio necesita uno propio');
+      }
+
+      let eq = null;
       if (!esTexto(e.equipo)) {
         mal(donde + ' no tiene equipo');
       } else if (reglas && reglas.equipos && !reglas.equipos[e.equipo]) {
         mal(donde + ' usa el equipo "' + e.equipo + '", que no existe en reglas.json. ' +
             'Los que existen son: ' + Object.keys(reglas.equipos).join(', '));
+      } else if (reglas && reglas.equipos) {
+        eq = reglas.equipos[e.equipo];
+      }
+
+      if (e.nivel !== undefined && !NIVELES.includes(e.nivel)) {
+        mal(donde + ' tiene nivel "' + e.nivel + '". Tiene que ser uno de: ' + NIVELES.join(', '));
+      }
+
+      if (e.musculosSecundarios !== undefined && !esLista(e.musculosSecundarios)) {
+        mal(donde + ': musculosSecundarios tiene que ser una lista (en la planilla, separados por coma)');
+      }
+
+      if (e.sustitutos !== undefined) {
+        if (!esLista(e.sustitutos)) {
+          mal(donde + ': sustitutos tiene que ser una lista');
+        } else {
+          for (const s of e.sustitutos) {
+            if (!idsEjercicio.has(s)) mal(donde + ' tiene como sustituto a "' + s + '", que no existe en la planilla');
+            if (s === e.id) mal(donde + ' se tiene a sí mismo como sustituto');
+          }
+        }
+      }
+
+      // Un solo número no puede significar "kilos agregados" y "kilos de ayuda" a la vez.
+      if (e.admiteLastre && e.admiteAsistencia) {
+        mal(donde + ' tiene marcadas lastre Y asistencia. Un solo número no puede querer decir ' +
+            '"kilos que agrego" y "kilos de ayuda" al mismo tiempo. Elegí una, o hacé dos ejercicios distintos.');
+      }
+      if ((e.admiteLastre || e.admiteAsistencia) && !e.esPesoCorporal) {
+        ojo(donde + ' tiene lastre o asistencia pero no está marcado como peso corporal. Revisalo.');
+      }
+
+      // El peso inicial vive acá, así que acá se revisa que exista de verdad.
+      if (e.pesoInicialKg !== null && e.pesoInicialKg !== undefined) {
+        if (!esNumero(e.pesoInicialKg) || e.pesoInicialKg < 0) {
+          mal(donde + ' tiene un pesoInicialKg inválido (un número, o vacío si lo elige el usuario)');
+        } else if (eq && !e.admiteAsistencia) {
+          const r = cargaPosible(e.pesoInicialKg, eq);
+          if (!r.ok) mal(donde + ': el peso inicial ' + e.pesoInicialKg + ' kg ' + r.motivo);
+        }
       }
     });
+
     if (fallas === fallasAntesDeEjercicios) bien(idsEjercicio.size + ' ejercicios, todos con id propio');
   }
 }
@@ -114,9 +204,9 @@ if (ejercicios) {
 titulo('rutinas.json');
 
 const rutinas = leerJson('datos/rutinas.json');
+const fallasAntesDeRutinas = fallas;
 
 if (rutinas) {
-  const fallasAntesDeRutinas = fallas;
   if (!Array.isArray(rutinas)) {
     mal('rutinas.json tiene que ser una lista');
   } else {
@@ -131,10 +221,7 @@ if (rutinas) {
 
       if (!esTexto(r.nombre)) mal(dondeR + ' no tiene nombre');
 
-      if (!Array.isArray(r.dias) || r.dias.length === 0) {
-        mal(dondeR + ' no tiene días');
-        return;
-      }
+      if (!Array.isArray(r.dias) || r.dias.length === 0) { mal(dondeR + ' no tiene días'); return; }
 
       const idsDia = new Set();
       r.dias.forEach((d, j) => {
@@ -144,55 +231,52 @@ if (rutinas) {
         else idsDia.add(d.id);
 
         if (!esTexto(d.nombre)) mal(dondeD + ' no tiene nombre');
-
-        if (!Array.isArray(d.ejercicios) || d.ejercicios.length === 0) {
-          mal(dondeD + ' no tiene ejercicios');
-          return;
-        }
+        if (!Array.isArray(d.ejercicios) || d.ejercicios.length === 0) { mal(dondeD + ' no tiene ejercicios'); return; }
 
         d.ejercicios.forEach((ep, k) => {
           const donde = dondeD + ', ejercicio ' + (k + 1) +
                         (esTexto(ep.ejercicioId) ? ' ("' + ep.ejercicioId + '")' : '');
           totalEjercicios++;
 
-          if (!esTexto(ep.ejercicioId)) {
-            mal(donde + ' no dice a qué ejercicio apunta');
-          } else if (idsEjercicio.size && !idsEjercicio.has(ep.ejercicioId)) {
-            mal(donde + ' apunta a un ejercicio que no está en ejercicios.json');
-          }
+          const ficha = Array.isArray(ejercicios) ? ejercicios.find((x) => x.id === ep.ejercicioId) : null;
+
+          if (!esTexto(ep.ejercicioId)) mal(donde + ' no dice a qué ejercicio apunta');
+          else if (idsEjercicio.size && !ficha) mal(donde + ' apunta a un ejercicio que no está en ejercicios.json');
 
           if (!Number.isInteger(ep.series) || ep.series < 1) mal(donde + ' tiene un número de series inválido');
           if (!Number.isInteger(ep.repsMin) || ep.repsMin < 1) mal(donde + ' tiene un repsMin inválido');
           if (!Number.isInteger(ep.repsMax) || ep.repsMax < 1) mal(donde + ' tiene un repsMax inválido');
 
-          if (Number.isInteger(ep.repsMin) && Number.isInteger(ep.repsMax) && ep.repsMin > ep.repsMax) {
-            mal(donde + ': repsMin (' + ep.repsMin + ') es mayor que repsMax (' + ep.repsMax + '). Están al revés.');
-          }
-          if (ep.repsMin === ep.repsMax) {
-            mal(donde + ': repsMin y repsMax son iguales (' + ep.repsMin + '). ' +
-                'Sin rango, el peso nunca sube. Poné un techo más alto que el piso.');
+          if (Number.isInteger(ep.repsMin) && Number.isInteger(ep.repsMax)) {
+            if (ep.repsMin > ep.repsMax) {
+              mal(donde + ': repsMin (' + ep.repsMin + ') es mayor que repsMax (' + ep.repsMax + '). Están al revés.');
+            } else if (ep.repsMin === ep.repsMax) {
+              mal(donde + ': repsMin y repsMax son iguales (' + ep.repsMin + '). ' +
+                  'Sin rango, el peso nunca sube. Poné un techo más alto que el piso.');
+            }
           }
 
-          if (!esNumero(ep.descansoSeg) || ep.descansoSeg <= 0) mal(donde + ' tiene un descanso inválido');
+          if (!esNumero(ep.descansoSeg) || ep.descansoSeg <= 0) mal(donde + ' tiene un descanso entre series inválido');
           else if (ep.descansoSeg > 600) mal(donde + ' tiene un descanso de ' + ep.descansoSeg + ' s: parece un error');
 
-          if (ep.pesoInicialKg !== null && (!esNumero(ep.pesoInicialKg) || ep.pesoInicialKg < 0)) {
-            mal(donde + ' tiene un pesoInicialKg inválido (tiene que ser un número, o null si lo elige el usuario)');
+          if (ep.descansoDespuesSeg !== undefined &&
+              (!esNumero(ep.descansoDespuesSeg) || ep.descansoDespuesSeg <= 0 || ep.descansoDespuesSeg > 900)) {
+            mal(donde + ' tiene un descansoDespuesSeg inválido');
           }
 
-          // Un peso inicial que no se puede armar con ese equipo confunde desde el arranque.
-          const ej = Array.isArray(ejercicios) ? ejercicios.find((x) => x.id === ep.ejercicioId) : null;
-          const eq = ej && reglas && reglas.equipos ? reglas.equipos[ej.equipo] : null;
-          if (eq && esNumero(ep.pesoInicialKg) && eq.incrementoMinimoKg > 0) {
-            if (ep.pesoInicialKg < eq.pesoBaseKg) {
-              mal(donde + ': el peso inicial ' + ep.pesoInicialKg + ' kg es menor que el piso de ' +
-                  eq.nombre + ' (' + eq.pesoBaseKg + ' kg)');
-            } else {
-              const pasos = (ep.pesoInicialKg - eq.pesoBaseKg) / eq.incrementoMinimoKg;
-              if (Math.abs(pasos - Math.round(pasos)) > 0.001) {
-                mal(donde + ': ' + ep.pesoInicialKg + ' kg no se puede armar con ' + eq.nombre +
-                    ', que sube de a ' + eq.incrementoMinimoKg + ' kg desde ' + eq.pesoBaseKg + ' kg');
-              }
+          // El peso inicial vive en ejercicios.json. Acá solo puede haber una excepción,
+          // y si la hay tiene que ser una carga que exista.
+          if (ep.pesoInicialKg !== undefined && ep.pesoInicialKg !== null) {
+            const eq = ficha && reglas && reglas.equipos ? reglas.equipos[ficha.equipo] : null;
+            if (!esNumero(ep.pesoInicialKg) || ep.pesoInicialKg < 0) {
+              mal(donde + ' tiene un pesoInicialKg inválido');
+            } else if (eq && !(ficha && ficha.admiteAsistencia)) {
+              const res = cargaPosible(ep.pesoInicialKg, eq);
+              if (!res.ok) mal(donde + ': el peso inicial ' + ep.pesoInicialKg + ' kg ' + res.motivo);
+            }
+            if (ficha && ep.pesoInicialKg === ficha.pesoInicialKg) {
+              ojo(donde + ' repite el mismo pesoInicialKg que ya tiene el ejercicio. Sacalo de la rutina ' +
+                  'para que el valor viva en un solo lugar.');
             }
           }
         });
@@ -207,7 +291,7 @@ if (rutinas) {
 
 titulo('Resumen');
 if (fallas === 0) {
-  console.log('  Los datos están bien. Se puede publicar.\n');
+  console.log('  Los datos están bien' + (avisos ? ' (' + avisos + ' aviso(s) para mirar)' : '') + '. Se puede publicar.\n');
 } else {
   console.log('  \x1b[31m' + fallas + ' problema(s).\x1b[0m Arreglalos en la planilla y volvé a generar los JSON.\n');
 }
