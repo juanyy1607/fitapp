@@ -77,3 +77,17 @@ describe('importarHistorial rechaza basura sin tocar la base', () => {
     await assert.rejects(() => importarHistorial('{"sesiones":[{"roto":true}]}'), /ninguna sesión que se pueda leer/);
   });
 });
+
+describe('los módulos nuevos de la app', () => {
+  test('temporizador.js', async () => {
+    const m = await import('./temporizador.js');
+    for (const nombre of ['construirWavAlarma', 'crearTemporizador']) {
+      assert.equal(typeof m[nombre], 'function', 'falta exportar ' + nombre);
+    }
+  });
+
+  test('pantallas/sesion.js (se importa, no se ejecuta: necesita DOM)', async () => {
+    const m = await import('../pantallas/sesion.js');
+    assert.equal(typeof m.crearPantallaSesion, 'function');
+  });
+});

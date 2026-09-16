@@ -1,4 +1,36 @@
-# Banco de pruebas — Temporizador de descanso en PWA
+# FitApp
+
+App de entrenamiento de gimnasio, en español, para principiantes. PWA instalable, funciona
+sin señal, los datos viven en el teléfono.
+
+**https://juanyy1607.github.io/fitapp/**
+
+## Cómo está organizado el repo
+
+| Carpeta | Qué es |
+|---|---|
+| raíz | **La app.** `index.html`, `app.js`, `estilos.css`, `sw.js` |
+| [logica/](logica/) | Las reglas y el guardado. Sin pantalla, todo testeable |
+| [pantallas/](pantallas/) | Una pantalla por archivo |
+| [datos/](datos/) | Las reglas de entrenamiento. Las maneja el socio, ver [DATOS.md](DATOS.md) |
+| [banco/](banco/) | El banco de pruebas del temporizador (fase 0) |
+| [tools/](tools/) | Herramientas de desarrollo. No viajan al teléfono |
+
+```bash
+node --test                    # 124 tests, cero dependencias
+node tools/validar-datos.mjs   # revisa datos/ y explica qué está mal
+node tools/verificar.mjs       # manifest, íconos y carga offline
+```
+
+## El banco de pruebas
+
+Vive en **https://juanyy1607.github.io/fitapp/banco/** y ya no está en la raíz.
+
+Sirvió para resolver la incógnita que bloqueaba toda la arquitectura, y sigue ahí porque
+**falta probarlo en Android**. Lo que sigue es su documentación original.
+
+---
+
 
 Fase 0 del proyecto. Todavía no hay código de producto.
 

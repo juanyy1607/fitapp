@@ -102,7 +102,15 @@ else bien(`apple-touch-icon → ${apple[1]}`);
 
 titulo('3 · Sintaxis de los .js');
 
-for (const js of ['db.js', 'app.js', 'sw.js']) {
+const JS_A_REVISAR = [
+  'app.js', 'sw.js', 'tipos.js',
+  'logica/progresion.js', 'logica/historial.js', 'logica/almacen.js',
+  'logica/catalogo.js', 'logica/respaldo.js', 'logica/temporizador.js',
+  'pantallas/sesion.js',
+  'banco/db.js', 'banco/app.js', 'banco/sw.js'
+];
+
+for (const js of JS_A_REVISAR) {
   try {
     execFileSync(process.execPath, ['--check', join(RAIZ, js)], { stdio: 'pipe' });
     bien(`${js} sin errores de sintaxis`);
@@ -113,15 +121,15 @@ for (const js of ['db.js', 'app.js', 'sw.js']) {
 
 // db.js se carga en la página Y en el service worker. Si toca `document` o `window`,
 // el service worker revienta apenas arranca y la estrategia B nunca va a funcionar.
-const db = leer('db.js');
+const db = leer('banco/db.js');
 const prohibido = db.split('\n')
   .map((l, i) => ({ n: i + 1, l }))
   .filter((x) => !/^\s*(\*|\/\/|\/\*)/.test(x.l))
   .filter((x) => /\b(document|window)\b/.test(x.l));
 if (prohibido.length) {
-  prohibido.forEach((x) => mal(`db.js:${x.n} usa document/window: rompe adentro del service worker`));
+  prohibido.forEach((x) => mal(`banco/db.js:${x.n} usa document/window: rompe adentro del service worker`));
 } else {
-  bien('db.js no toca document ni window (puede correr en el service worker)');
+  bien('banco/db.js no toca document ni window (puede correr en el service worker)');
 }
 
 // ========================================================== 4. referencias
@@ -136,7 +144,7 @@ for (const m of html.matchAll(/(?:src|href)="(?!https?:|data:|#)([^"]+)"/g)) {
 // Todo id que app.js busca con $('...') tiene que existir en el HTML, o la app
 // explota en silencio al arrancar.
 const app = leer('app.js');
-const ids = new Set([...app.matchAll(/\$\('([A-Za-z0-9_]+)'\)/g)].map((m) => m[1]));
+const ids = new Set([...app.matchAll(/\$\('([A-Za-z0-9_-]+)'\)/g)].map((m) => m[1]));
 const faltantes = [...ids].filter((id) => !new RegExp(`id="${id}"`).test(html));
 if (faltantes.length) faltantes.forEach((id) => mal(`app.js busca el id "${id}" y no está en index.html`));
 else bien(`los ${ids.size} ids que usa app.js existen en index.html`);
@@ -195,11 +203,11 @@ servidor.listen(0, '127.0.0.1', async () => {
   }
 
   // Todo archivo servible que no esté en la lista no va a estar disponible sin señal.
-  const enDisco = ['index.html', 'styles.css', 'app.js', 'db.js', 'manifest.webmanifest',
-    'tipos.js',
+  const enDisco = ['index.html', 'estilos.css', 'app.js', 'manifest.webmanifest', 'tipos.js',
     'datos/reglas.json', 'datos/ejercicios.json', 'datos/rutinas.json',
     'logica/progresion.js', 'logica/historial.js', 'logica/almacen.js',
-    'logica/catalogo.js', 'logica/respaldo.js'];
+    'logica/catalogo.js', 'logica/respaldo.js', 'logica/temporizador.js',
+    'pantallas/sesion.js'];
   const olvidados = enDisco.filter((f) => !lista.includes('./' + f));
   if (olvidados.length) olvidados.forEach((f) => mal(`${f} no está en la lista de precarga: no va a andar sin señal`));
   else bien('todos los archivos de la app están en la lista de precarga');

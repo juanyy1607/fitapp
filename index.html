@@ -3,172 +3,42 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Banco de pruebas — Temporizador</title>
-<meta name="description" content="Banco de pruebas: ¿puede una PWA avisar a los 90 segundos con el teléfono bloqueado y sin señal?">
+<title>FitApp</title>
+<meta name="description" content="Registrá tus entrenamientos. Funciona sin señal.">
 
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="estilos.css">
 
-<!-- iOS ignora buena parte del manifest. Estas tres etiquetas son las que hacen que,
-     al agregarla a la pantalla de inicio en iPhone, abra sin la barra de Safari. -->
+<!-- iOS ignora buena parte del manifest. Estas son las que hacen que, al agregarla a la
+     pantalla de inicio en iPhone, abra sin la barra de Safari. -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Timer">
+<meta name="apple-mobile-web-app-title" content="FitApp">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
-
 <meta name="theme-color" content="#0f1115">
 </head>
 <body>
 
-<header>
-  <h1>Banco de pruebas del temporizador</h1>
-  <p class="sub">¿Puede una PWA avisarte a los 90 s con el teléfono bloqueado en el bolsillo y sin señal?</p>
-</header>
+<div id="cargando" class="cargando">Cargando…</div>
 
-<!-- ================================================== 1. QUÉ SOPORTA ESTE TELÉFONO -->
-<section>
-  <h2>1 · Qué soporta este teléfono</h2>
-  <div id="capacidades" class="caps"></div>
-  <p class="agente" id="agente"></p>
-  <div class="botonera">
-    <button id="btnPermiso" class="sec">Pedir permiso de notificaciones</button>
-    <button id="btnProbarNotif" class="sec">Probar notificación</button>
-    <button id="btnProbarSonido" class="sec">Probar sonido (Web Audio)</button>
-    <button id="btnProbarAlarma" class="sec">Probar alarma (archivo)</button>
-    <button id="btnRefrescar" class="sec">Refrescar</button>
-  </div>
-  <p class="ayuda">
-    Tocá <strong>Pedir permiso</strong> y las <strong>dos pruebas de sonido</strong> antes de la
-    primera corrida. El navegador no deja que la app haga ruido si vos no la tocaste primero.
-  </p>
-  <div class="aviso">
-    <strong>Antes de decir "no sonó", revisá el iPhone:</strong><br>
-    1 · El interruptor físico del costado, arriba a la izquierda, no tiene que estar en silencio
-    (sin la franja naranja a la vista).<br>
-    2 · El volumen de <em>timbre</em> arriba.<br>
-    3 · Sin Modo Concentración ni No Molestar.<br>
-    Si el interruptor está en silencio, iOS no deja sonar nada de esto y todas las corridas
-    dan "no avisó" por un motivo que no tiene nada que ver con la estrategia.
-  </div>
-</section>
+<div id="error" class="error-fatal" hidden></div>
 
-<!-- ============================================================ 2. CONFIGURACIÓN -->
-<section>
-  <h2>2 · Configurar la corrida</h2>
+<main id="app" hidden>
+  <!-- Pantalla 1 · Elegir qué entrenar hoy -->
+  <section id="pantalla-hoy" class="pantalla"></section>
 
-  <fieldset>
-    <legend>Duración</legend>
-    <label class="radio"><input type="radio" name="dur" value="30"> 30 s</label>
-    <label class="radio"><input type="radio" name="dur" value="90" checked> 90 s</label>
-    <label class="radio"><input type="radio" name="dur" value="180"> 180 s</label>
-  </fieldset>
+  <!-- Pantalla 2 · La sesión en curso. Es la que importa. -->
+  <section id="pantalla-sesion" class="pantalla" hidden></section>
 
-  <fieldset>
-    <legend>Estrategias de aviso <span class="leve">(activalas de a una para aislar cuál anda)</span></legend>
+  <!-- Pantalla 3 · Historial -->
+  <section id="pantalla-historial" class="pantalla" hidden></section>
+</main>
 
-    <label class="check">
-      <input type="checkbox" id="estA" checked>
-      <span><strong>A · setTimeout + Notification</strong>
-      <em>La página espera y dispara una notificación. Muere si el sistema congela la página.</em></span>
-    </label>
+<nav id="navegacion" class="nav" hidden>
+  <button type="button" data-ir="hoy" class="nav-boton activo">Hoy</button>
+  <button type="button" data-ir="historial" class="nav-boton">Historial</button>
+</nav>
 
-    <label class="check">
-      <input type="checkbox" id="estB">
-      <span><strong>B · Service worker + setTimeout</strong>
-      <em>Lo mismo pero desde el service worker, pidiéndole al navegador que no lo mate.</em></span>
-    </label>
-
-    <label class="check">
-      <input type="checkbox" id="estC">
-      <span><strong>C · Wake Lock + sonido</strong>
-      <em>Deja la pantalla prendida y agenda los beeps en el reloj del motor de audio.</em></span>
-    </label>
-
-    <label class="check">
-      <input type="checkbox" id="estD" checked>
-      <span><strong>D · Recuperación por marca de tiempo</strong>
-      <em><strong>No avisa.</strong> Solo comprueba que el contador esté bien al volver, y mide cuánto estuvo congelado el JavaScript.</em></span>
-    </label>
-
-    <label class="check">
-      <input type="checkbox" id="estE" checked>
-      <span><strong>E · Alarma adentro del archivo de audio</strong> <span class="leve">(la favorita)</span>
-      <em>Reproduce un WAV que es silencio durante todo el descanso y después trae la alarma adentro.
-      El tiempo lo cuenta el hardware de audio, no el JavaScript. Medido el 15/09: mantiene la página
-      viva con la pantalla bloqueada (brecha de 0 a 1000 ms, contra 27 a 54 segundos sin ella).</em></span>
-    </label>
-  </fieldset>
-
-  <fieldset>
-    <legend>Etiquetas de esta corrida <span class="leve">(quedan en el JSON)</span></legend>
-    <label class="campo">Escenario
-      <select id="escenario">
-        <option value="1 — app abierta, pantalla encendida">1 — app abierta, pantalla encendida</option>
-        <option value="2 — app abierta, pantalla bloqueada">2 — app abierta, pantalla bloqueada</option>
-        <option value="3 — segundo plano, pantalla encendida">3 — segundo plano, pantalla encendida</option>
-        <option value="4 — segundo plano, pantalla bloqueada">4 — segundo plano, pantalla bloqueada</option>
-        <option value="5 — bloqueada, en el bolsillo, 5 min">5 — bloqueada, en el bolsillo, 5 min</option>
-        <option value="6 — modo avión + pantalla bloqueada">6 — modo avión + pantalla bloqueada ★</option>
-      </select>
-    </label>
-    <label class="campo">Dispositivo
-      <select id="dispositivo">
-        <option value="iPhone — instalada">iPhone — instalada</option>
-        <option value="iPhone — pestaña Safari">iPhone — pestaña Safari</option>
-        <option value="Android — instalada">Android — instalada</option>
-        <option value="Android — pestaña Chrome">Android — pestaña Chrome</option>
-        <option value="Escritorio">Escritorio</option>
-      </select>
-    </label>
-  </fieldset>
-</section>
-
-<!-- ============================================================== 3. TEMPORIZADOR -->
-<section class="destacada">
-  <h2>3 · Correr</h2>
-  <div id="contador" class="contador">--:--</div>
-  <p id="sobrante" class="sobrante"></p>
-  <p id="estadoCorrida" class="estado">Sin corrida activa</p>
-  <div class="botonera">
-    <button id="btnArrancar" class="principal">Arrancar</button>
-    <button id="btnCancelar" class="sec" disabled>Cancelar</button>
-  </div>
-
-  <div id="avisoReanudacion" class="aviso" hidden></div>
-
-  <div id="marcado" class="marcado" hidden>
-    <h3>¿El teléfono te avisó?</h3>
-    <p class="ayuda">
-      El log sabe si el sistema <em>creó</em> la notificación. No sabe si vos la escuchaste
-      con el teléfono en el bolsillo. Ese dato lo ponés vos y es el que decide todo.
-    </p>
-    <textarea id="notaMarcado" rows="2" placeholder="Nota opcional: qué pasó, qué escuchaste, cuánto tardó…"></textarea>
-    <div class="botonera">
-      <button id="btnSiAviso" class="ok">Sí, me avisó</button>
-      <button id="btnNoAviso" class="mal">No, no me avisó</button>
-    </div>
-  </div>
-</section>
-
-<!-- ==================================================================== 4. REGISTRO -->
-<section>
-  <h2>4 · Registro</h2>
-  <p class="estado" id="conteoLog">0 eventos guardados</p>
-  <div class="botonera">
-    <button id="btnExportar" class="principal">Exportar JSON</button>
-    <button id="btnCopiar" class="sec">Copiar al portapapeles</button>
-    <button id="btnBorrar" class="peligro">Borrar todo</button>
-  </div>
-  <p class="ayuda" id="avisoCopia"></p>
-  <textarea id="volcado" rows="8" hidden readonly></textarea>
-  <div id="log" class="log"></div>
-</section>
-
-<footer>
-  <p>Guardado en IndexedDB: sobrevive a que cierres la app. Nada sale del teléfono.</p>
-</footer>
-
-<script src="db.js"></script>
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
