@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "descansoPorDefectoSeg": 90,
+  "progresion": {
+    "subirPorcentaje": 2.5,
+    "bajarPorcentaje": 10,
+    "sesionesFallidasParaBajar": 2
+  },
+  "equipos": {
+    "barra": {
+      "nombre": "Barra",
+      "incrementoMinimoKg": 2.5,
+      "pesoBaseKg": 20
+    },
+    "mancuernas": {
+      "nombre": "Mancuernas",
+      "incrementoMinimoKg": 2,
+      "pesoBaseKg": 0
+    },
+    "maquina": {
+      "nombre": "Máquina",
+      "incrementoMinimoKg": 5,
+      "pesoBaseKg": 0
+    },
+    "polea": {
+      "nombre": "Polea",
+      "incrementoMinimoKg": 2.5,
+      "pesoBaseKg": 0
+    },
+    "peso-corporal": {
+      "nombre": "Peso corporal",
+      "incrementoMinimoKg": 0,
+      "pesoBaseKg": 0
+    }
+  }
+}

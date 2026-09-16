@@ -1,0 +1,14 @@
+[
+  { "id": "sentadilla", "nombre": "Sentadilla con barra", "equipo": "barra", "grupo": "piernas" },
+  { "id": "press-banca", "nombre": "Press de banca", "equipo": "barra", "grupo": "pecho" },
+  { "id": "remo-barra", "nombre": "Remo con barra", "equipo": "barra", "grupo": "espalda" },
+  { "id": "peso-muerto", "nombre": "Peso muerto", "equipo": "barra", "grupo": "espalda" },
+  { "id": "press-militar", "nombre": "Press militar de pie", "equipo": "barra", "grupo": "hombros" },
+  { "id": "press-inclinado-mancuernas", "nombre": "Press inclinado con mancuernas", "equipo": "mancuernas", "grupo": "pecho" },
+  { "id": "curl-mancuernas", "nombre": "Curl de bíceps con mancuernas", "equipo": "mancuernas", "grupo": "brazos" },
+  { "id": "elevaciones-laterales", "nombre": "Elevaciones laterales", "equipo": "mancuernas", "grupo": "hombros" },
+  { "id": "prensa", "nombre": "Prensa de piernas", "equipo": "maquina", "grupo": "piernas" },
+  { "id": "jalon-al-pecho", "nombre": "Jalón al pecho", "equipo": "polea", "grupo": "espalda" },
+  { "id": "triceps-polea", "nombre": "Extensión de tríceps en polea", "equipo": "polea", "grupo": "brazos" },
+  { "id": "plancha", "nombre": "Plancha abdominal", "equipo": "peso-corporal", "grupo": "core" }
+]
