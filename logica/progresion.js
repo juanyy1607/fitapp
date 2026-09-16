@@ -141,6 +141,53 @@ export function fallosSeguidos(historial, plan) {
 }
 
 /**
+ * ¿Alguna vez retrocedió en este ejercicio?
+ *
+ * Retroceder es haber bajado la carga en algún momento: por un deload, o porque el usuario
+ * lo decidió. En los asistidos es al revés, subir la ayuda es retroceder, y por eso mira
+ * el signo.
+ *
+ * Sirve para una cosa sola: desactivar el salto doble. El salto doble existe para corregir
+ * un arranque demasiado liviano, y un retroceso es la prueba de que la carga ya está
+ * calibrada. Sin esta guarda pasa algo feo: alguien llega a 60 kg, falla dos veces, baja a
+ * 55, y con saltos dobles vuelve a 60 y a 65 en dos sesiones, o sea que termina más arriba
+ * del peso donde ya había fallado. El deload no habría servido para nada.
+ *
+ * @param {IntentoEjercicio[]} historial  Del más reciente al más viejo.
+ * @param {number} sentido                1 normal, -1 en asistidos.
+ * @returns {boolean}
+ */
+export function huboRetroceso(historial, sentido) {
+  for (let i = 0; i < historial.length - 1; i++) {
+    const masNuevo = historial[i].pesoKg;
+    const masViejo = historial[i + 1].pesoKg;
+    if (sentido > 0 ? masNuevo < masViejo : masNuevo > masViejo) return true;
+  }
+  return false;
+}
+
+/**
+ * ¿El salto doble es razonable, o es un salto demasiado grande de golpe?
+ *
+ * Con cargas chicas, duplicar el salto es una barbaridad aunque el usuario haya marcado
+ * "Fácil": en mancuernas, pasar de 10 a 14 kg es un 40% más de golpe. El tope lo pone
+ * `saltoMaximoPorcentaje` en reglas.json, y limita SOLO al salto doble. El salto normal
+ * nunca se bloquea: si no, el usuario quedaría trabado.
+ *
+ * @param {number} pesoActual
+ * @param {number} saltoKg
+ * @param {Reglas} reglas
+ * @returns {boolean}
+ */
+export function cabeElSaltoDoble(pesoActual, saltoKg, reglas) {
+  const tope = reglas.progresion.saltoMaximoPorcentaje;
+  if (!tope || tope <= 0) return true;
+  // Con carga cero (lastre desde el peso corporal) el porcentaje no se puede calcular.
+  if (pesoActual <= 0) return true;
+  return (Math.abs(saltoKg) / pesoActual) * 100 <= tope;
+}
+
+/**
  * La función principal: qué peso y qué repeticiones sugerirle al usuario.
  *
  * @param {IntentoEjercicio[]} historial  Del más reciente al más viejo. Vacío = primera vez.
@@ -229,9 +276,15 @@ export function sugerirCarga(historial, plan, ejercicio, reglas) {
      * y que además haya sido fácil significa que arrancó demasiado liviano. Ese es el
      * problema real de las primeras semanas, y el salto doble lo corrige.
      */
-    const multiplicador = ultimo.esfuerzo === 'facil'
+    const multiplicadorPedido = ultimo.esfuerzo === 'facil'
       ? (reglas.progresion.multiplicadorSiFueFacil || 1)
       : 1;
+
+    // Dos guardas sobre el salto doble. Si cualquiera de las dos lo bloquea, sube normal:
+    // nunca se queda sin subir.
+    const yaRetrocedio = huboRetroceso(historial, sentido);
+    const entraPorTamano = cabeElSaltoDoble(ultimo.pesoKg, subirKg * multiplicadorPedido, reglas);
+    const multiplicador = (multiplicadorPedido > 1 && !yaRetrocedio && entraPorTamano) ? multiplicadorPedido : 1;
     const saltoDoble = multiplicador > 1;
 
     let nuevo = redondearACargaPosible(ultimo.pesoKg + sentido * subirKg * multiplicador, equipo);

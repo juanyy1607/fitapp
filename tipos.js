@@ -103,6 +103,25 @@
  * @property {number} [multiplicadorSiFueFacil]  Por cuánto multiplicar el salto cuando el
  *                                               usuario marcó "Fácil". 1 = el botón no
  *                                               cambia nada. 2 = salto doble.
+ * @property {number} [saltoMaximoPorcentaje]    Tope del salto DOBLE, en % de la carga
+ *                                               actual. Evita que en cargas chicas el
+ *                                               salto doble sea un 40% de golpe. No limita
+ *                                               nunca al salto normal.
+ */
+
+/**
+ * Un desacuerdo abierto sobre una regla, anotado a la vista en datos/reglas.json.
+ *
+ * Existe para que ninguna decisión de entrenamiento quede cambiada por atrás: si lo
+ * implementado no coincide con lo que respondió el socio, queda escrito con las dos
+ * posiciones y el validador lo grita en cada corrida.
+ * @typedef {Object} ConflictoDeRegla
+ * @property {string} clave
+ * @property {string} estado
+ * @property {string} postura_socio
+ * @property {string} postura_juan
+ * @property {string} implementado
+ * @property {string} [nota]
  */
 
 /**
@@ -114,6 +133,38 @@
  * @property {number} descansoEntreEjerciciosSeg Al pasar de un ejercicio al siguiente.
  * @property {ReglaProgresion} progresion
  * @property {Record<string, Equipo>} equipos
+ * @property {ConflictoDeRegla[]} [conflictos]  Desacuerdos abiertos, a la vista.
+ */
+
+// ================================================================== gamificación
+// TODAVÍA NO IMPLEMENTADO. Esto es solo dónde van a vivir las cosas, decidido ahora para
+// no tener que migrar el historial después. Ver la sección de DATOS.md.
+//
+// La decisión de fondo: **la racha y el XP se CALCULAN del historial, no se guardan.**
+// Si se guardaran, podrían quedar desincronizados del historial real —y no habría forma de
+// saber cuál de los dos tiene razón—, y cambiar la fórmula obligaría a migrar a todos los
+// usuarios. Calculándolos, cambiar la fórmula recalcula todo el pasado solo.
+//
+// Lo único que hay que guardar es lo que NO se puede deducir: qué insignias ya se
+// avisaron, para no volver a festejar la misma dos veces.
+
+/**
+ * Una insignia. Las condiciones son datos, no código: las define el socio.
+ * @typedef {Object} Insignia
+ * @property {string} id
+ * @property {string} nombre
+ * @property {string} descripcion
+ * @property {string} [icono]
+ * @property {'sesiones-totales'|'dias-seguidos'|'volumen-total'|'peso-en-ejercicio'|'sesiones-en-semana'} condicion
+ * @property {number} objetivo          El número a alcanzar según la condición.
+ * @property {string} [ejercicioId]     Solo para la condición 'peso-en-ejercicio'.
+ * @property {number} [xp]              Cuánto XP otorga.
+ */
+
+/**
+ * Lo único de gamificación que se guarda, porque no se puede deducir del historial.
+ * @typedef {Object} EstadoGamificacion
+ * @property {string[]} insigniasAvisadas  Ids ya festejados, para no repetir el aviso.
  */
 
 // ====================================================================== historial

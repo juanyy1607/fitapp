@@ -6,7 +6,8 @@
   "progresion": {
     "bajarPorcentaje": 10,
     "sesionesFallidasParaBajar": 2,
-    "multiplicadorSiFueFacil": 2
+    "multiplicadorSiFueFacil": 2,
+    "saltoMaximoPorcentaje": 20
   },
   "equipos": {
     "barra": {
@@ -63,5 +64,15 @@
       "pesoBaseKg": 0,
       "subirKg": 5
     }
-  }
+  },
+  "conflictos": [
+    {
+      "clave": "progresion.bajarPorcentaje",
+      "estado": "SIN RESOLVER",
+      "postura_socio": "La app NO baja el peso nunca. El usuario se queda en la carga hasta que la saca.",
+      "postura_juan": "Bajar 10% después de dos sesiones seguidas sin completar el rango.",
+      "implementado": "postura_juan",
+      "nota": "Implementado como pidió Juan. El socio respondió lo contrario y todavía no se discutió. NO es un cambio hecho por atrás."
+    }
+  ]
 }

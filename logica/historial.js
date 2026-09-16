@@ -145,20 +145,32 @@ export function ultimoPorEjercicio(sesiones) {
  *
  * Es la medida más simple de "cuánto trabajaste hoy" y sirve para comparar sesiones.
  * El peso corporal cuenta 0 kg, que es una limitación conocida y está bien por ahora.
+ *
+ * **Los unilaterales cuentan doble.** La convención del proyecto es que el usuario anota
+ * el peso de UNA mancuerna o UN lado, nunca la suma: si hace zancadas con 20 kg en cada
+ * mano, anota 20. Eso es lo que dice la mancuerna y lo que la gente tiene en la cabeza, y
+ * evita hacer cuentas con las manos transpiradas. Pero para el volumen hay que contar los
+ * dos lados, porque el trabajo total fue el doble.
+ *
  * @param {Sesion} sesion
+ * @param {Set<string>} [unilaterales]  Ids de ejercicios marcados es_unilateral.
  * @returns {number}
  */
-export function volumenTotal(sesion) {
-  const total = sesion.series.reduce((suma, s) => suma + s.pesoKg * s.reps, 0);
+export function volumenTotal(sesion, unilaterales) {
+  const total = sesion.series.reduce((suma, s) => {
+    const lados = unilaterales && unilaterales.has(s.ejercicioId) ? 2 : 1;
+    return suma + s.pesoKg * s.reps * lados;
+  }, 0);
   return Math.round(total * 10) / 10;
 }
 
 /**
  * Los datos de una sesión listos para mostrar en la lista de historial.
  * @param {Sesion} sesion
+ * @param {Set<string>} [unilaterales]
  * @returns {{id: string, inicioTs: number, duracionMin: number|null, series: number, ejercicios: number, volumenKg: number, terminada: boolean}}
  */
-export function resumenSesion(sesion) {
+export function resumenSesion(sesion, unilaterales) {
   const ejercicios = new Set(sesion.series.map((s) => s.ejercicioId));
   const terminada = sesion.finTs !== null && sesion.finTs !== undefined;
   return {
@@ -167,7 +179,7 @@ export function resumenSesion(sesion) {
     duracionMin: terminada ? Math.round((/** @type {number} */ (sesion.finTs) - sesion.inicioTs) / 60000) : null,
     series: sesion.series.length,
     ejercicios: ejercicios.size,
-    volumenKg: volumenTotal(sesion),
+    volumenKg: volumenTotal(sesion, unilaterales),
     terminada
   };
 }

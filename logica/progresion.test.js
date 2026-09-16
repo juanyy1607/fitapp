@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   sugerirCarga, redondearACargaPosible, completoElRango, fallosSeguidos,
-  redondear2, modoDeCarga, pesoInicialDe
+  redondear2, modoDeCarga, pesoInicialDe, huboRetroceso, cabeElSaltoDoble
 } from './progresion.js';
 
 /** @typedef {import('../tipos.js').Reglas} Reglas */
@@ -381,9 +381,19 @@ describe('sugerirCarga — botones Fácil / Justo / No llegué', () => {
     assert.equal(s.pesoKg, 35);
   });
 
-  test('en asistidos, Fácil baja el doble de ayuda', () => {
+  test('en asistidos con poca ayuda, el tope bloquea el salto doble', () => {
+    // Bajar de 30 a 20 kg de ayuda es cargarse 10 kg más del propio cuerpo de golpe: un
+    // 33% más de dificultad. El tope lo bloquea y baja un escalón, que es lo correcto.
     const s = sugerirCarga([intento(30, [10, 10, 10], 'facil')], PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
-    assert.equal(s.pesoKg, 20, '30 − 2 × 5 kg de ayuda');
+    assert.equal(s.pesoKg, 25);
+    assert.doesNotMatch(s.explicacion, /salto es doble/);
+  });
+
+  test('en asistidos con mucha ayuda, el salto doble sí entra', () => {
+    // Con 60 kg de ayuda, bajar 10 es un 16,7%: entra en el tope.
+    const s = sugerirCarga([intento(60, [10, 10, 10], 'facil')], PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
+    assert.equal(s.pesoKg, 50);
+    assert.match(s.explicacion, /salto es doble/);
   });
 
   test('con Fácil la ayuda tampoco baja de cero', () => {
@@ -395,7 +405,11 @@ describe('sugerirCarga — botones Fácil / Justo / No llegué', () => {
     for (let peso = 20; peso <= 200; peso += 2.5) {
       const conFacil = sugerirCarga([intento(peso, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), reglas);
       const conJusto = sugerirCarga([intento(peso, [12, 12, 12], 'justo')], PLAN_BARRA, ej('press-banca'), reglas);
-      assert.ok(conFacil.pesoKg !== null && conJusto.pesoKg !== null && conFacil.pesoKg > conJusto.pesoKg,
+      // Desde 25 kg el salto doble entra en el tope y tiene que ser estrictamente mayor.
+      // Por debajo, el tope lo bloquea y los dos dan lo mismo: eso es correcto, no un error.
+      const debeSuperar = peso >= 25;
+      const ok = debeSuperar ? conFacil.pesoKg > conJusto.pesoKg : conFacil.pesoKg >= conJusto.pesoKg;
+      assert.ok(conFacil.pesoKg !== null && conJusto.pesoKg !== null && ok,
         'con ' + peso + ' kg: fácil dio ' + conFacil.pesoKg + ' y justo dio ' + conJusto.pesoKg);
     }
   });
@@ -404,5 +418,104 @@ describe('sugerirCarga — botones Fácil / Justo / No llegué', () => {
     const sinMultiplicador = { ...reglas, progresion: { ...reglas.progresion, multiplicadorSiFueFacil: 1 } };
     const s = sugerirCarga([intento(40, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), sinMultiplicador);
     assert.equal(s.pesoKg, 42.5);
+  });
+});
+
+// =====================================================================
+// Las dos guardas del salto doble. Sin estas, el deload no sirve para nada.
+// =====================================================================
+
+describe('huboRetroceso', () => {
+  test('sin historial o con uno solo, no hubo retroceso', () => {
+    assert.equal(huboRetroceso([], 1), false);
+    assert.equal(huboRetroceso([intento(40, [12, 12, 12])], 1), false);
+  });
+
+  test('subir siempre no es retroceso', () => {
+    assert.equal(huboRetroceso([intento(42.5, [8, 8, 8]), intento(40, [12, 12, 12])], 1), false);
+  });
+
+  test('haber bajado alguna vez sí lo es', () => {
+    assert.equal(huboRetroceso([intento(35, [10, 9, 8]), intento(40, [9, 8, 8])], 1), true);
+  });
+
+  test('en asistidos el signo va al revés: bajar la ayuda es progresar', () => {
+    assert.equal(huboRetroceso([intento(25, [10, 10, 10]), intento(30, [10, 10, 10])], -1), false);
+    assert.equal(huboRetroceso([intento(35, [5, 5, 4]), intento(30, [5, 5, 4])], -1), true);
+  });
+});
+
+describe('cabeElSaltoDoble', () => {
+  test('12,5% entra', () => {
+    assert.equal(cabeElSaltoDoble(40, 5, reglas), true);
+  });
+  test('40% no entra: es el caso de las mancuernas de 10 kg', () => {
+    assert.equal(cabeElSaltoDoble(10, 4, reglas), false);
+  });
+  test('con carga cero no se puede calcular el porcentaje, así que pasa', () => {
+    assert.equal(cabeElSaltoDoble(0, 2.5, reglas), true);
+  });
+});
+
+describe('el salto doble NO rebota después de un deload', () => {
+  test('el escenario completo: 60 kg, falla dos veces, baja, y no vuelve a pasarse', () => {
+    // Llegó a 60, falló dos sesiones, el deload lo dejó en 55. Ahora completa y marca
+    // Fácil. Sin guarda volvería a 60 y después a 65, o sea MÁS ARRIBA del peso donde ya
+    // había fallado, en dos sesiones. El deload no habría servido para nada.
+    const historial = [
+      intento(55, [12, 12, 12], 'facil'),
+      intento(60, [10, 9, 8]),
+      intento(60, [9, 9, 8])
+    ];
+    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
+    assert.equal(s.motivo, 'subir');
+    assert.equal(s.pesoKg, 57.5, 'sube normal, no doble');
+    assert.doesNotMatch(s.explicacion, /salto es doble/);
+  });
+
+  test('y sigue desactivado en las sesiones siguientes', () => {
+    const historial = [
+      intento(57.5, [12, 12, 12], 'facil'),
+      intento(55, [12, 12, 12], 'facil'),
+      intento(60, [10, 9, 8]),
+      intento(60, [9, 9, 8])
+    ];
+    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
+    assert.equal(s.pesoKg, 60, 'llega a 60 de a un escalón, no de un salto');
+  });
+
+  test('sin retroceso previo, el salto doble sigue funcionando', () => {
+    const historial = [intento(55, [12, 12, 12], 'facil'), intento(52.5, [12, 12, 12])];
+    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
+    assert.equal(s.pesoKg, 60);
+  });
+});
+
+describe('el salto doble no puede ser un salto enorme en cargas chicas', () => {
+  /** @type {EjercicioPlanificado} */
+  const PLAN_CURL = { ejercicioId: 'curl-mancuernas', series: 3, repsMin: 10, repsMax: 15, descansoSeg: 60 };
+
+  test('mancuernas de 10 kg: el salto doble sería 40% y se bloquea', () => {
+    const s = sugerirCarga([intento(10, [15, 15, 15], 'facil')], PLAN_CURL, ej('curl-mancuernas'), reglas);
+    assert.equal(s.pesoKg, 12, 'sube un escalón, no dos');
+    assert.doesNotMatch(s.explicacion, /salto es doble/);
+  });
+
+  test('mancuernas de 40 kg: el mismo salto es 10% y sí entra', () => {
+    const s = sugerirCarga([intento(40, [15, 15, 15], 'facil')], PLAN_CURL, ej('curl-mancuernas'), reglas);
+    assert.equal(s.pesoKg, 44);
+    assert.match(s.explicacion, /salto es doble/);
+  });
+
+  test('barra vacía: 25% se bloquea, así que un principiante no salta a 25 kg', () => {
+    const s = sugerirCarga([intento(20, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), reglas);
+    assert.equal(s.pesoKg, 22.5);
+  });
+
+  test('pase lo que pase, siempre sube algo', () => {
+    for (let peso = 20; peso <= 200; peso += 2.5) {
+      const s = sugerirCarga([intento(peso, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), reglas);
+      assert.ok(s.pesoKg !== null && s.pesoKg > peso, 'con ' + peso + ' kg no subió');
+    }
   });
 });

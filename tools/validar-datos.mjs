@@ -43,6 +43,24 @@ const esTexto = (v) => typeof v === 'string' && v.trim().length > 0;
 const esLista = (v) => Array.isArray(v);
 const NIVELES = ['principiante', 'intermedio', 'avanzado'];
 
+/*
+ * Listas cerradas de grupos y músculos.
+ *
+ * Tienen que ser cerradas porque el armador de rutinas va a agrupar por estos valores. Si
+ * una fila dice "pecho" y otra "Pectoral", para la app son dos grupos distintos y el
+ * armador reparte mal el volumen sin que nadie vea un error. Si hace falta un valor nuevo,
+ * se agrega acá a propósito, no escribiéndolo distinto en una celda.
+ */
+const GRUPOS = [
+  'pecho', 'espalda', 'piernas', 'hombros', 'brazos', 'core',
+  'glúteos', 'pantorrillas', 'cuerpo-completo'
+];
+
+const MUSCULOS = GRUPOS.concat([
+  'tríceps', 'bíceps', 'antebrazos', 'cuádriceps', 'isquiotibiales',
+  'dorsales', 'trapecio', 'lumbares', 'abductores', 'aductores'
+]);
+
 /**
  * ¿Ese peso se puede armar de verdad con ese equipo?
  * Una barra olímpica sube de a 2,5 kg desde 20, así que 21 kg no existe.
@@ -75,6 +93,26 @@ if (reglas) {
     ojo('los números de reglas.json están marcados como PROVISORIOS: el socio todavía no los confirmó');
   }
 
+  /*
+   * Los desacuerdos abiertos se gritan en cada corrida.
+   *
+   * La razón es una sola: que ninguna decisión de entrenamiento quede cambiada por atrás.
+   * Si lo que está implementado no coincide con lo que respondió el socio, tiene que
+   * saltar a la vista cada vez que alguien toca los datos, no quedar escondido en un
+   * comentario que nadie lee.
+   */
+  if (Array.isArray(reglas.conflictos) && reglas.conflictos.length) {
+    console.log('');
+    for (const c of reglas.conflictos) {
+      ojo('\x1b[1mCONFLICTO SIN RESOLVER en ' + c.clave + '\x1b[0m');
+      console.log('          socio dice     : ' + c.postura_socio);
+      console.log('          Juan dice      : ' + c.postura_juan);
+      console.log('          implementado   : ' + c.implementado);
+      if (c.nota) console.log('          nota           : ' + c.nota);
+    }
+    console.log('');
+  }
+
   // El porcentaje de subida se sacó a propósito: con 2,5% sobre 60 kg el salto daba 1,5 kg,
   // menos que el disco más chico, así que el redondeo se lo comía y el parámetro no hacía
   // nada hasta los 100 kg. Si alguien lo vuelve a poner, avisamos.
@@ -94,6 +132,15 @@ if (reglas) {
   if (!esNumero(p.bajarPorcentaje) || p.bajarPorcentaje <= 0) mal('progresion.bajarPorcentaje tiene que ser mayor que cero');
   if (!Number.isInteger(p.sesionesFallidasParaBajar) || p.sesionesFallidasParaBajar < 1) {
     mal('progresion.sesionesFallidasParaBajar tiene que ser un número entero de 1 para arriba');
+  }
+
+  if (p.saltoMaximoPorcentaje !== undefined) {
+    if (!esNumero(p.saltoMaximoPorcentaje) || p.saltoMaximoPorcentaje <= 0) {
+      mal('progresion.saltoMaximoPorcentaje tiene que ser un porcentaje mayor que cero');
+    } else if (p.saltoMaximoPorcentaje < 5) {
+      ojo('progresion.saltoMaximoPorcentaje es ' + p.saltoMaximoPorcentaje +
+          '%: tan bajo, el salto doble no se va a aplicar casi nunca');
+    }
   }
 
   // Cuánto se agranda el salto cuando el usuario marca "Fácil". 1 = el botón no hace nada.
@@ -149,7 +196,13 @@ if (ejercicios) {
 
       if (!esTexto(e.id)) mal(donde + ' no tiene id');
       if (!esTexto(e.nombre)) mal(donde + ' no tiene nombre');
-      if (!esTexto(e.grupo)) mal(donde + ' no tiene grupo muscular');
+      if (!esTexto(e.grupo)) {
+        mal(donde + ' no tiene grupo muscular');
+      } else if (!GRUPOS.includes(e.grupo)) {
+        mal(donde + ' tiene grupo "' + e.grupo + '", que no está en la lista. ' +
+            'Los válidos son: ' + GRUPOS.join(', ') + '. ' +
+            '(Escribir el mismo grupo de dos formas distintas hace que el armador reparta mal el volumen.)');
+      }
 
       const repetidos = ejercicios.filter((x) => x.id === e.id);
       if (esTexto(e.id) && repetidos.length > 1 && repetidos[0] !== e) {
@@ -170,8 +223,20 @@ if (ejercicios) {
         mal(donde + ' tiene nivel "' + e.nivel + '". Tiene que ser uno de: ' + NIVELES.join(', '));
       }
 
-      if (e.musculosSecundarios !== undefined && !esLista(e.musculosSecundarios)) {
-        mal(donde + ': musculosSecundarios tiene que ser una lista (en la planilla, separados por coma)');
+      if (e.musculosSecundarios !== undefined) {
+        if (!esLista(e.musculosSecundarios)) {
+          mal(donde + ': musculosSecundarios tiene que ser una lista (en la planilla, separados por coma)');
+        } else {
+          for (const m of e.musculosSecundarios) {
+            if (!MUSCULOS.includes(m)) {
+              mal(donde + ' tiene el músculo secundario "' + m + '", que no está en la lista. ' +
+                  'Los válidos son: ' + MUSCULOS.join(', '));
+            }
+          }
+          if (e.musculosSecundarios.includes(e.grupo)) {
+            ojo(donde + ' repite "' + e.grupo + '" como músculo secundario, y ya es su grupo principal');
+          }
+        }
       }
 
       if (e.sustitutos !== undefined) {

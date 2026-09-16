@@ -228,3 +228,39 @@ describe('historial + progresión juntos', () => {
     assert.equal(s.pesoKg, 42.5, 'tiene que seguir sugiriendo lo mismo mientras entrenás');
   });
 });
+
+// =====================================================================
+// Unilaterales: el usuario anota el peso de UNA mancuerna, nunca la suma.
+// =====================================================================
+
+describe('volumen con ejercicios unilaterales', () => {
+  const unilaterales = new Set(['curl-mancuernas']);
+
+  test('un unilateral cuenta los dos lados', () => {
+    // El usuario anotó 10 kg (lo que dice la mancuerna) por 10 repeticiones. El trabajo
+    // real fue de los dos lados, así que el volumen es 200, no 100.
+    const s = sesion({ inicioTs: HOY, series: [['curl-mancuernas', 1, 10, 10]] });
+    assert.equal(volumenTotal(s, unilaterales), 200);
+  });
+
+  test('un ejercicio normal cuenta una sola vez', () => {
+    const s = sesion({ inicioTs: HOY, series: [['press-banca', 1, 40, 10]] });
+    assert.equal(volumenTotal(s, unilaterales), 400);
+  });
+
+  test('sin la lista de unilaterales no se rompe: cuenta todo simple', () => {
+    const s = sesion({ inicioTs: HOY, series: [['curl-mancuernas', 1, 10, 10]] });
+    assert.equal(volumenTotal(s), 100);
+  });
+
+  test('el resumen de la sesión usa la misma cuenta', () => {
+    const s = sesion({ inicioTs: HOY, series: [['curl-mancuernas', 1, 10, 10], ['press-banca', 1, 40, 10]] });
+    assert.equal(resumenSesion(s, unilaterales).volumenKg, 600);
+  });
+
+  test('los unilaterales del catálogo real están marcados', () => {
+    const marcados = catalogo.filter((e) => e.esUnilateral).map((e) => e.id);
+    assert.ok(marcados.includes('curl-mancuernas'), 'el curl con mancuernas es unilateral');
+    assert.ok(marcados.length >= 3, 'tendría que haber varios unilaterales en el catálogo');
+  });
+});
