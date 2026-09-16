@@ -5,7 +5,8 @@
   "descansoEntreEjerciciosSeg": 120,
   "progresion": {
     "bajarPorcentaje": 10,
-    "sesionesFallidasParaBajar": 2
+    "sesionesFallidasParaBajar": 2,
+    "multiplicadorSiFueFacil": 2
   },
   "equipos": {
     "barra": {

@@ -100,6 +100,9 @@
  * @typedef {Object} ReglaProgresion
  * @property {number} bajarPorcentaje            Cuánto bajar al estancarse.
  * @property {number} sesionesFallidasParaBajar  Cuántas veces seguidas hay que fallar antes de bajar.
+ * @property {number} [multiplicadorSiFueFacil]  Por cuánto multiplicar el salto cuando el
+ *                                               usuario marcó "Fácil". 1 = el botón no
+ *                                               cambia nada. 2 = salto doble.
  */
 
 /**
@@ -156,6 +159,8 @@
  * @property {number} fechaTs
  * @property {number} pesoKg
  * @property {number[]} reps   Las repeticiones de cada serie, en orden.
+ * @property {Esfuerzo} [esfuerzo]  Cómo se sintió, según el botón de la última serie.
+ *                                  Solo modifica el TAMAÑO del salto, nunca si hay salto.
  */
 
 /**

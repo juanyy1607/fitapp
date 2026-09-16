@@ -89,6 +89,7 @@ Los números de la progresión. Dos columnas nada más. **Todos provisorios.**
 | descanso_entre_ejercicios_seg | 120 |
 | bajar_porcentaje | 10 |
 | sesiones_fallidas_para_bajar | 2 |
+| multiplicador_si_fue_facil | 2 |
 
 Cómo se leen, en orden:
 
@@ -100,6 +101,8 @@ Cómo se leen, en orden:
    quedaría trabado para siempre.
 3. Si pasa `sesiones_fallidas_para_bajar` veces seguidas sin completar el rango, el peso
    baja `bajar_porcentaje` y vuelve a subir desde ahí.
+4. Si además marcó **Fácil** en la última serie, el salto se multiplica por
+   `multiplicador_si_fue_facil`. Con 1, el botón no cambia nada. Ver la sección de abajo.
 
 > **Por qué el deload sí sigue siendo un porcentaje.** Acá el porcentaje no miente: a
 > cualquier carga razonable, un 10% da más que el disco más chico, y además tiene sentido
@@ -239,6 +242,39 @@ puestos por defecto.
 4. **Confirmar los cuatro números de la pestaña `reglas`**: 90 s entre series, 120 s entre
    ejercicios, deload de 10%, y dos sesiones fallidas antes de bajar.
 
-5. **Los botones Fácil / Justo / No llegué.** Está decidido que reemplazan al RIR y que se
-   registran desde el día uno. Falta decidir si además modifican la progresión — ver la
-   discusión en el historial del proyecto. Hoy **se guardan pero no deciden nada**.
+5. **¿El salto doble cuando marca "Fácil" tiene que ser de 2, o prefiere otro número?**
+   Es el `multiplicador_si_fue_facil`. Ver la sección de abajo.
+
+---
+
+## Los botones Fácil / Justo / No llegué
+
+Reemplazan al RIR, que un principiante no sabe estimar. Se preguntan **una sola vez por
+ejercicio, en la última serie** — preguntarlo en cada serie serían unos 36 toques extra
+por sesión, y la fricción es lo que hace que la gente deje de registrar.
+
+**La regla: las repeticiones deciden SI progresás, el botón decide CUÁNTO.**
+
+| Lo que pasó | Lo que hace la app |
+|---|---|
+| Completó el rango + **Fácil** | Sube `subir_kg` × `multiplicador_si_fue_facil` |
+| Completó el rango + **Justo** | Sube `subir_kg` |
+| Completó el rango + **No llegué** | Sube `subir_kg` — mandan los datos objetivos |
+| No completó el rango, cualquier botón | Mantiene el peso |
+
+El botón **nunca** puede hacer que suba sin haber completado el rango, ni frenarlo si lo
+completó. Es a propósito: un principiante estima mal cuánto le faltaba para fallar, así
+que el dato subjetivo no manda sobre el objetivo. Si el esfuerzo decidiera, el que marca
+"Fácil" por optimismo subiría demasiado rápido y el que marca "No llegué" por precaución
+se quedaría quieto para siempre.
+
+Lo que sí aporta el botón es algo que las repeticiones no ven: **completar el rango y que
+además haya sido fácil significa que arrancó demasiado liviano.** Ese es el problema real
+de las primeras semanas —pasarse un mes y medio trepando desde un peso trivial— y el salto
+doble lo corrige.
+
+En los ejercicios asistidos el salto doble baja el doble de ayuda, nunca por debajo de cero.
+
+Los tres botones se guardan en el historial de todas formas, marquen lo que marquen. El
+dato subjetivo no se puede recuperar después, así que dentro de unos meses vamos a poder
+calibrar esta regla con datos reales en vez de con criterio.

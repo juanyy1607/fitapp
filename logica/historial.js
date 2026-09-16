@@ -95,10 +95,20 @@ export function intentosDeEjercicio(sesiones, ejercicioId) {
     if (series.length === 0) continue;
 
     const pesoKg = pesoPredominante(series);
+
+    // El botón de esfuerzo se pregunta una sola vez por ejercicio, en la última serie.
+    // Buscamos de atrás para adelante la última que lo tenga, por si en alguna sesión
+    // vieja quedó sin responder.
+    let esfuerzo;
+    for (let i = series.length - 1; i >= 0; i--) {
+      if (series[i].esfuerzo) { esfuerzo = series[i].esfuerzo; break; }
+    }
+
     intentos.push({
       fechaTs: sesion.inicioTs,
       pesoKg,
-      reps: series.filter((s) => s.pesoKg === pesoKg).map((s) => s.reps)
+      reps: series.filter((s) => s.pesoKg === pesoKg).map((s) => s.reps),
+      esfuerzo
     });
   }
 

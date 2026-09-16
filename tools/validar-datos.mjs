@@ -96,6 +96,16 @@ if (reglas) {
     mal('progresion.sesionesFallidasParaBajar tiene que ser un número entero de 1 para arriba');
   }
 
+  // Cuánto se agranda el salto cuando el usuario marca "Fácil". 1 = el botón no hace nada.
+  if (p.multiplicadorSiFueFacil !== undefined) {
+    if (!esNumero(p.multiplicadorSiFueFacil) || p.multiplicadorSiFueFacil < 1) {
+      mal('progresion.multiplicadorSiFueFacil tiene que ser 1 o más. Con 1, el botón "Fácil" no cambia nada.');
+    } else if (p.multiplicadorSiFueFacil > 3) {
+      ojo('progresion.multiplicadorSiFueFacil es ' + p.multiplicadorSiFueFacil +
+          ': un salto tan grande de golpe puede ser peligroso para un principiante');
+    }
+  }
+
   const equipos = reglas.equipos || {};
   const clavesEquipo = Object.keys(equipos);
   if (clavesEquipo.length === 0) mal('no hay ningún equipo definido en reglas.equipos');

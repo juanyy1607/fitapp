@@ -18,6 +18,10 @@
  *   lo comía y el parámetro no hacía nada hasta los 100 kg. El socio habría creído que lo
  *   regulaba sin que pasara nada.
  *
+ * · **Los botones Fácil / Justo / No llegué solo cambian el TAMAÑO del salto**, nunca si
+ *   hay salto. Las repeticiones son objetivas; el esfuerzo percibido es subjetivo y los
+ *   principiantes lo estiman mal. Ver el comentario largo en la rama de "subir".
+ *
  * · **En los ejercicios asistidos, progresar es BAJAR el número.** Los kilos que registra
  *   el usuario en dominadas asistidas son los kilos de AYUDA de la máquina. Menos ayuda es
  *   mejor. Si esto se escribe mal, la app le dice a alguien que está mejorando que se
@@ -213,7 +217,24 @@ export function sugerirCarga(historial, plan, ejercicio, reglas) {
       };
     }
 
-    let nuevo = redondearACargaPosible(ultimo.pesoKg + sentido * subirKg, equipo);
+    /*
+     * Acá entra el botón de esfuerzo, y SOLO acá.
+     *
+     * Las repeticiones deciden SI progresa; el botón decide CUÁNTO. Marcar "Fácil" no
+     * puede hacer que suba sin haber completado el rango, y marcar "No llegué" no puede
+     * frenarlo si lo completó. Es a propósito: un principiante estima muy mal cuánto le
+     * faltaba para fallar, así que el dato subjetivo no puede mandar sobre el objetivo.
+     *
+     * Lo que sí aporta el botón es algo que las repeticiones no ven: completar el rango
+     * y que además haya sido fácil significa que arrancó demasiado liviano. Ese es el
+     * problema real de las primeras semanas, y el salto doble lo corrige.
+     */
+    const multiplicador = ultimo.esfuerzo === 'facil'
+      ? (reglas.progresion.multiplicadorSiFueFacil || 1)
+      : 1;
+    const saltoDoble = multiplicador > 1;
+
+    let nuevo = redondearACargaPosible(ultimo.pesoKg + sentido * subirKg * multiplicador, equipo);
 
     // Caso borde importante: si el redondeo devuelve el mismo peso de siempre, el usuario
     // queda trabado para siempre sin que nada falle. Lo empujamos un escalón.
@@ -226,11 +247,12 @@ export function sugerirCarga(historial, plan, ejercicio, reglas) {
       repsObjetivo: plan.repsMin,
       motivo: 'subir',
       modo,
-      explicacion: modo === 'asistencia'
+      explicacion: (modo === 'asistencia'
         ? 'Completaste ' + plan.repsMax + ' repeticiones con ' + ultimo.pesoKg + ' kg de ayuda. ' +
           'Bajá la ayuda a ' + nuevo + ' kg y volvé a ' + plan.repsMin + '.'
         : 'Completaste ' + plan.repsMax + ' repeticiones en las ' + plan.series + ' series con ' +
-          ultimo.pesoKg + ' kg. Subí a ' + nuevo + ' kg y volvé a ' + plan.repsMin + '.',
+          ultimo.pesoKg + ' kg. Subí a ' + nuevo + ' kg y volvé a ' + plan.repsMin + '.') +
+        (saltoDoble ? ' Como lo marcaste fácil, el salto es doble.' : ''),
       advertencia
     };
   }

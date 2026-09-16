@@ -47,7 +47,8 @@ const PLAN_ASISTIDO = { ejercicioId: 'dominadas-asistidas', series: 3, repsMin: 
 /** @type {EjercicioPlanificado} */
 const PLAN_LASTRE = { ejercicioId: 'dominadas', series: 3, repsMin: 6, repsMax: 10, descansoSeg: 120 };
 
-const intento = (/** @type {number} */ pesoKg, /** @type {number[]} */ reps) => ({ fechaTs: Date.now(), pesoKg, reps });
+const intento = (/** @type {number} */ pesoKg, /** @type {number[]} */ reps, /** @type {any} */ esfuerzo) =>
+  ({ fechaTs: Date.now(), pesoKg, reps, esfuerzo });
 
 // =====================================================================
 
@@ -334,5 +335,74 @@ describe('sugerirCarga — datos mal cargados', () => {
         assert.ok(ids.has(s), 'el ejercicio "' + e.id + '" tiene como sustituto a "' + s + '", que no existe');
       }
     }
+  });
+});
+
+// =====================================================================
+// Los botones de esfuerzo. La regla es: las repeticiones deciden SI progresa, el boton
+// decide CUANTO. El boton nunca puede frenar ni forzar la progresion.
+// =====================================================================
+
+describe('sugerirCarga — botones Fácil / Justo / No llegué', () => {
+  test('completar el rango y marcar Fácil da salto doble', () => {
+    const s = sugerirCarga([intento(40, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), reglas);
+    assert.equal(s.motivo, 'subir');
+    assert.equal(s.pesoKg, 45, '40 + 2 × 2,5 kg');
+    assert.match(s.explicacion, /salto es doble/);
+  });
+
+  test('marcar Justo da el salto normal', () => {
+    const s = sugerirCarga([intento(40, [12, 12, 12], 'justo')], PLAN_BARRA, ej('press-banca'), reglas);
+    assert.equal(s.pesoKg, 42.5);
+    assert.doesNotMatch(s.explicacion, /salto es doble/);
+  });
+
+  test('sin botón contestado se comporta como Justo', () => {
+    const s = sugerirCarga([intento(40, [12, 12, 12])], PLAN_BARRA, ej('press-banca'), reglas);
+    assert.equal(s.pesoKg, 42.5);
+  });
+
+  test('marcar No llegué habiendo completado NO frena: mandan los datos objetivos', () => {
+    const s = sugerirCarga([intento(40, [12, 12, 12], 'no-llegue')], PLAN_BARRA, ej('press-banca'), reglas);
+    assert.equal(s.motivo, 'subir');
+    assert.equal(s.pesoKg, 42.5);
+  });
+
+  test('marcar Fácil SIN completar el rango no hace subir nada', () => {
+    const s = sugerirCarga([intento(40, [12, 11, 10], 'facil')], PLAN_BARRA, ej('press-banca'), reglas);
+    assert.equal(s.motivo, 'mantener');
+    assert.equal(s.pesoKg, 40);
+  });
+
+  test('marcar Fácil no evita el deload por estancamiento', () => {
+    const historial = [intento(40, [10, 9, 8], 'facil'), intento(40, [9, 9, 8], 'facil')];
+    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
+    assert.equal(s.motivo, 'bajar');
+    assert.equal(s.pesoKg, 35);
+  });
+
+  test('en asistidos, Fácil baja el doble de ayuda', () => {
+    const s = sugerirCarga([intento(30, [10, 10, 10], 'facil')], PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
+    assert.equal(s.pesoKg, 20, '30 − 2 × 5 kg de ayuda');
+  });
+
+  test('con Fácil la ayuda tampoco baja de cero', () => {
+    const s = sugerirCarga([intento(5, [10, 10, 10], 'facil')], PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
+    assert.ok(s.pesoKg !== null && s.pesoKg >= 0);
+  });
+
+  test('en todo el rango, Fácil siempre sube más que Justo', () => {
+    for (let peso = 20; peso <= 200; peso += 2.5) {
+      const conFacil = sugerirCarga([intento(peso, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), reglas);
+      const conJusto = sugerirCarga([intento(peso, [12, 12, 12], 'justo')], PLAN_BARRA, ej('press-banca'), reglas);
+      assert.ok(conFacil.pesoKg !== null && conJusto.pesoKg !== null && conFacil.pesoKg > conJusto.pesoKg,
+        'con ' + peso + ' kg: fácil dio ' + conFacil.pesoKg + ' y justo dio ' + conJusto.pesoKg);
+    }
+  });
+
+  test('si el multiplicador es 1, el botón no cambia nada', () => {
+    const sinMultiplicador = { ...reglas, progresion: { ...reglas.progresion, multiplicadorSiFueFacil: 1 } };
+    const s = sugerirCarga([intento(40, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), sinMultiplicador);
+    assert.equal(s.pesoKg, 42.5);
   });
 });
