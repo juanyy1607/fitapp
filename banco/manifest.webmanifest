@@ -1,7 +1,7 @@
 {
-  "name": "Fitapp",
-  "short_name": "Fitapp",
-  "description": "Registrá tus entrenamientos. Funciona sin señal.",
+  "name": "Banco de pruebas — Temporizador",
+  "short_name": "Banco",
+  "description": "Banco de pruebas del temporizador de descanso en PWA.",
   "lang": "es-AR",
   "dir": "ltr",
   "start_url": "./",
@@ -16,19 +16,19 @@
   ],
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "../icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "../icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-maskable-512.png",
+      "src": "../icons/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

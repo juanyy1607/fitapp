@@ -20,6 +20,8 @@
  * bloqueada. Eso solo se sabe en un teléfono real. Para eso es el banco de pruebas.
  */
 import { readFileSync, existsSync, statSync } from 'node:fs';
+import { inflateSync } from 'node:zlib';
+import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { join, dirname, extname } from 'node:path';
@@ -151,7 +153,105 @@ else bien(`los ${ids.size} ids que usa app.js existen en index.html`);
 
 // ========================================================== 5. offline
 
-titulo('5 · Carga offline (lista de precarga del service worker)');
+// ============================================== apariencia de app nativa
+
+titulo('5 · Se ve como una app y no como una página web');
+
+/*
+ * Esta sección existe por un error real: la app se veía metida abajo del Dynamic Island
+ * y nada fallaba. No hay error de consola ni test que se ponga rojo: simplemente se ve
+ * mal, y solo se nota mirando un iPhone con muesca.
+ *
+ * La trampa es que env(safe-area-inset-*) devuelve 0 en silencio si al viewport le falta
+ * viewport-fit=cover. O sea que el CSS puede estar perfecto y no hacer absolutamente nada.
+ */
+
+const css = leer('estilos.css');
+
+if (/viewport-fit\s*=\s*cover/.test(html)) {
+  bien('el viewport lleva viewport-fit=cover');
+} else {
+  mal('al <meta viewport> le falta viewport-fit=cover: sin eso env(safe-area-inset-*) ' +
+      'devuelve 0 y el contenido se mete abajo del Dynamic Island');
+}
+
+for (const [nombre, patron, queEs] of [
+  ['apple-mobile-web-app-capable', /name="apple-mobile-web-app-capable"\s+content="yes"/, 'abre sin la barra de Safari'],
+  ['apple-mobile-web-app-status-bar-style', /name="apple-mobile-web-app-status-bar-style"/, 'el color de la barra de estado'],
+  ['apple-mobile-web-app-title', /name="apple-mobile-web-app-title"/, 'el nombre abajo del ícono'],
+  ['theme-color', /name="theme-color"/, 'el color del marco en Android']
+]) {
+  if (patron.test(html)) bien(nombre);
+  else mal('falta <meta name="' + nombre + '">: ' + queEs);
+}
+
+if (/--safe-top:\s*env\(safe-area-inset-top/.test(css) && /--safe-bottom:\s*env\(safe-area-inset-bottom/.test(css)) {
+  bien('estilos.css define --safe-top y --safe-bottom');
+  // Mirado sobre .pantalla en particular, que es donde vive el contenido. Si el token se
+  // usara solo en otra regla, la pantalla principal seguiría tapada y esto pasaría igual.
+  const reglaPantalla = css.match(/\.pantalla\s*\{[^}]*\}/);
+  if (reglaPantalla && /var\(--safe-top\)/.test(reglaPantalla[0])) {
+    bien('.pantalla usa --safe-top para bajar el contenido');
+  } else {
+    mal('.pantalla no usa --safe-top: el contenido va a quedar abajo del Dynamic Island');
+  }
+  if (/var\(--safe-bottom\)/.test(css)) bien('y algo usa --safe-bottom para la barra de gestos');
+  else mal('nadie usa --safe-bottom: la barra de abajo va a quedar tapada por la del sistema');
+} else {
+  mal('estilos.css no define --safe-top / --safe-bottom');
+}
+
+// El color del <meta> y el del manifest tienen que coincidir, o la app instalada cambia
+// de color entre la pantalla de arranque y la app.
+const metaColor = html.match(/name="theme-color"\s+content="([^"]+)"/);
+if (metaColor && manifest && manifest.theme_color) {
+  if (metaColor[1].toLowerCase() === String(manifest.theme_color).toLowerCase()) {
+    bien('el theme-color del HTML y el del manifest coinciden (' + metaColor[1] + ')');
+  } else {
+    mal('theme-color del HTML (' + metaColor[1] + ') distinto al del manifest (' +
+        manifest.theme_color + '): la app cambia de color al abrir');
+  }
+}
+
+// Un ícono con fondo transparente queda con un recuadro blanco o negro en la pantalla de
+// inicio, según el sistema. Tiene que ser opaco.
+for (const icono of (manifest && manifest.icons) || []) {
+  if (!hay(icono.src)) continue;
+  const transparentes = contarPixelesTransparentes(join(RAIZ, icono.src));
+  if (transparentes === null) ojo(icono.src + ': no se pudo leer la transparencia');
+  else if (transparentes > 0) mal(icono.src + ' tiene ' + transparentes + ' píxeles transparentes: ' +
+                                  'en la pantalla de inicio va a quedar con un recuadro alrededor');
+  else bien(icono.src + ' es completamente opaco');
+}
+
+/** Cuenta los píxeles que no son 100% opacos. null si el PNG no se pudo leer. */
+function contarPixelesTransparentes(ruta) {
+  try {
+    const b = readFileSync(ruta);
+    if (b.readUInt8(25) !== 6) return 0;   // no es RGBA: no tiene canal alfa
+    const ancho = b.readUInt32BE(16);
+    const alto = b.readUInt32BE(20);
+    let pos = 8;
+    const partes = [];
+    while (pos < b.length) {
+      const largo = b.readUInt32BE(pos);
+      if (b.toString('latin1', pos + 4, pos + 8) === 'IDAT') partes.push(b.subarray(pos + 8, pos + 8 + largo));
+      pos += 12 + largo;
+    }
+    const crudo = inflateSync(Buffer.concat(partes));
+    const porFila = ancho * 4 + 1;
+    let cuenta = 0;
+    for (let y = 0; y < alto; y++) {
+      if (crudo[y * porFila] !== 0) return null;   // usa filtros: no lo sabemos leer acá
+      for (let x = 0; x < ancho; x++) if (crudo[y * porFila + 1 + x * 4 + 3] !== 255) cuenta++;
+    }
+    return cuenta;
+  } catch (e) {
+    return null;
+  }
+}
+
+titulo('6 · Carga offline (lista de precarga del service worker)');
 
 const sw = leer('sw.js');
 const bloque = sw.match(/var ARCHIVOS = \[([\s\S]*?)\];/);
