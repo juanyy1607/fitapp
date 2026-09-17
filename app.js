@@ -1,23 +1,21 @@
 // @ts-check
 /**
- * app.js — El arranque de la app y la navegación entre pantallas.
+ * app.js — El arranque de la app, la navegación, y las pantallas de Hoy e Historial.
  *
- * Hace cuatro cosas y nada más:
- *   1. Carga los datos de entrenamiento y pide almacenamiento protegido.
- *   2. Registra el service worker, para que abra sin señal.
- *   3. Decide qué pantalla mostrar.
- *   4. Si quedó una sesión a medias, ofrece retomarla.
- *
- * La navegación es mostrar una sección y ocultar las otras. No hay ninguna librería de
- * ruteo: son tres pantallas.
+ * La navegación es mostrar una sección y ocultar las otras. No hay librería de ruteo: son
+ * tres pantallas.
  */
 
-import { cargarCatalogo } from './logica/catalogo.js';
-import { listarSesiones, guardarSesion } from './logica/almacen.js';
-import { sesionEnCurso, sesionesTerminadas, resumenSesion, diasEntrenadosEnLosUltimos } from './logica/historial.js';
+import { cargarCatalogo, descansoDe, descansoDespuesDe } from './logica/catalogo.js';
+import { listarSesiones, guardarSesion, guardarAjuste, leerAjuste } from './logica/almacen.js';
+import {
+  sesionEnCurso, sesionesTerminadas, resumenSesion,
+  sesionCompleta, esRecord, semanaEntrenada
+} from './logica/historial.js';
 import { asegurarPersistencia } from './logica/respaldo.js';
 import { crearTemporizador } from './logica/temporizador.js';
 import { crearPantallaSesion } from './pantallas/sesion.js';
+import { icono } from './iconos.js';
 
 /** @typedef {import('./tipos.js').Sesion} Sesion */
 /** @typedef {import('./logica/catalogo.js').Catalogo} Catalogo */
@@ -25,28 +23,29 @@ import { crearPantallaSesion } from './pantallas/sesion.js';
 /**
  * VERSIÓN — tiene que coincidir con la de sw.js. El verificador lo revisa.
  *
- * Se muestra abajo de todo en la pantalla de Hoy. Parece un detalle, pero sin esto no hay
- * forma de saber si lo que estás mirando en el teléfono es la versión nueva o una vieja
- * que quedó guardada, y se pierde media hora discutiendo si un cambio se aplicó o no.
+ * Se muestra abajo de todo en Hoy. Parece un detalle, pero sin esto no hay forma de saber
+ * si lo que estás mirando en el teléfono es la versión nueva o una vieja que quedó
+ * guardada, y se pierde media hora discutiendo si un cambio se aplicó o no.
  */
-const VERSION = 'v3';
+const VERSION = 'v4';
 
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
+
+const escapar = (/** @type {any} */ s) =>
+  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const dosDigitos = (/** @type {number} */ n) => String(n).padStart(2, '0');
 
 /**
  * ¿Está abierta desde el ícono de la pantalla de inicio, o es una pestaña del navegador?
  *
- * Importa más de lo que parece: las zonas seguras (lo que evita que el título quede abajo
- * del Dynamic Island) SOLO existen en modo instalado. En una pestaña de Safari valen cero,
- * así que todo el trabajo de bordes no se ve.
+ * Importa: los bordes seguros (lo que evita que el título quede abajo del Dynamic Island)
+ * SOLO existen en modo instalado. En una pestaña valen cero.
  */
 function estaInstalada() {
   return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
          /** @type {any} */ (window.navigator).standalone === true;
 }
-
-const escapar = (/** @type {any} */ s) =>
-  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /** @type {Catalogo} */
 let catalogo;
@@ -54,6 +53,8 @@ let catalogo;
 let sesiones = [];
 /** @type {ReturnType<typeof crearPantallaSesion>} */
 let pantallaSesion;
+let onboardingListo = false;
+let diasElegidos = 3;
 
 // ===================================================================== arranque
 
@@ -67,12 +68,13 @@ async function arrancar() {
     return;
   }
 
-  // No bloqueamos el arranque por esto: si falla, la app anda igual.
   asegurarPersistencia().catch(() => {});
   registrarServiceWorker();
 
   try {
     sesiones = await listarSesiones();
+    onboardingListo = !!(await leerAjuste('onboardingListo', false));
+    diasElegidos = Number(await leerAjuste('diasPorSemana', 3)) || 3;
   } catch (e) {
     sesiones = [];
   }
@@ -91,10 +93,9 @@ async function arrancar() {
     }
   });
 
+  dibujarNavegacion();
   $('cargando').hidden = true;
   $('app').hidden = false;
-  $('navegacion').hidden = false;
-
   ir('hoy');
 }
 
@@ -112,9 +113,8 @@ function mostrarErrorFatal(/** @type {any} */ e) {
 function registrarServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
 
-  // Si ya había uno controlando la página, entonces un cambio de controlador quiere decir
-  // que entró una versión nueva. En ese caso recargamos sola para que la veas, en vez de
-  // dejarte mirando la anterior sin saberlo.
+  // Si ya había uno controlando la página, un cambio de controlador quiere decir que entró
+  // una versión nueva: recargamos para que la veas, en vez de dejarte mirando la anterior.
   const habiaControlador = !!navigator.serviceWorker.controller;
   let recargando = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -124,11 +124,17 @@ function registrarServiceWorker() {
   });
 
   navigator.serviceWorker.register('sw.js').catch(() => {
-    // Sin service worker la app funciona, pero no abre sin señal. No es para frenar todo.
+    // Sin service worker la app anda, pero no abre sin señal. No es para frenar todo.
   });
 }
 
 // =================================================================== navegación
+
+function dibujarNavegacion() {
+  $('navegacion').innerHTML = `
+    <button type="button" data-ir="hoy" class="nav-boton activo">${icono('pesa', 22)}<span>Hoy</span></button>
+    <button type="button" data-ir="historial" class="nav-boton">${icono('lista', 22)}<span>Historial</span></button>`;
+}
 
 /** @param {'hoy'|'sesion'|'historial'} pantalla */
 function ir(pantalla) {
@@ -150,17 +156,29 @@ $('navegacion').addEventListener('click', (ev) => {
   if (b instanceof HTMLElement && b.dataset.ir) ir(/** @type {any} */ (b.dataset.ir));
 });
 
-// La app vuelve del bolsillo: puede haber pasado tiempo y el descanso ya terminó.
+// Puede haber pasado tiempo con la app en el bolsillo y el descanso ya terminó.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && pantallaSesion) pantallaSesion.refrescar();
 });
 
 // ================================================================ pantalla HOY
 
+/** Cuánto va a durar, más o menos: las series más los descansos. */
+function duracionEstimadaMin(/** @type {import('./tipos.js').DiaRutina} */ dia) {
+  const SEGUNDOS_POR_SERIE = 45;
+  let total = 0;
+  for (const p of dia.ejercicios) {
+    total += p.series * (SEGUNDOS_POR_SERIE + descansoDe(catalogo, p));
+    total += descansoDespuesDe(catalogo, p);
+  }
+  return Math.round(total / 60 / 5) * 5;
+}
+
 function dibujarHoy() {
-  const abierta = sesionEnCurso(sesiones);
   const terminadas = sesionesTerminadas(sesiones);
-  const diasEstaSemana = diasEntrenadosEnLosUltimos(sesiones, 7);
+
+  // Sin historial y sin haber pasado por la bienvenida, va la bienvenida.
+  if (!onboardingListo && terminadas.length === 0) { dibujarBienvenida(); return; }
 
   const rutina = catalogo.rutinas[0];
   if (!rutina) {
@@ -169,55 +187,106 @@ function dibujarHoy() {
   }
 
   // Cuál día toca: el siguiente al último que hizo.
-  const ultima = terminadas[0];
   let siguiente = 0;
-  if (ultima) {
-    const i = rutina.dias.findIndex((d) => d.id === ultima.diaId);
+  if (terminadas[0]) {
+    const i = rutina.dias.findIndex((d) => d.id === terminadas[0].diaId);
     if (i !== -1) siguiente = (i + 1) % rutina.dias.length;
   }
+  const dia = rutina.dias[siguiente];
+  const abierta = sesionEnCurso(sesiones);
 
-  const tarjetas = rutina.dias.map((dia, i) => {
-    const ejercicios = dia.ejercicios
-      .map((p) => catalogo.ejercicioPorId.get(p.ejercicioId))
-      .filter(Boolean)
-      .map((e) => /** @type {any} */ (e).nombre)
-      .join(' · ');
+  const filas = dia.ejercicios.map((p, i) => {
+    const e = catalogo.ejercicioPorId.get(p.ejercicioId);
     return `
-      <button type="button" class="tarjeta" data-dia="${escapar(dia.id)}">
-        <span class="tarjeta-titulo">${escapar(dia.nombre)}${i === siguiente ? ' — te toca' : ''}</span>
-        <span class="tarjeta-detalle">${escapar(ejercicios)}</span>
-      </button>`;
+      <div class="fila-ejercicio">
+        <span class="fila-numero">${dosDigitos(i + 1)}</span>
+        <span class="fila-nombre">${escapar(e ? e.nombre : p.ejercicioId)}</span>
+        <span class="fila-dato">${p.series} × ${p.repsMin}-${p.repsMax}</span>
+      </div>`;
   }).join('');
 
+  const otros = rutina.dias
+    .map((d, i) => ({ d, i }))
+    .filter(({ i }) => i !== siguiente)
+    .map(({ d, i }) => `
+      <button type="button" class="otro-dia" data-dia="${escapar(d.id)}">
+        <span>${escapar(d.nombre)}</span>
+        <span class="num">${d.ejercicios.length} ejercicios · ${duracionEstimadaMin(d)} min</span>
+      </button>`).join('');
+
   $('pantalla-hoy').innerHTML = `
-    <h1>Hoy</h1>
-    <p class="sub">${escapar(rutina.nombre)} · ${diasEstaSemana} ${diasEstaSemana === 1 ? 'día' : 'días'} esta semana</p>
+    <span class="etiqueta">Hoy te toca</span>
+    <h1 class="titulo-pantalla">${escapar(dia.nombre)}</h1>
+    <p class="secundario">${escapar(rutina.nombre)} · ${duracionEstimadaMin(dia)} min aprox.</p>
 
     ${abierta ? `
       <div class="aviso">
-        <strong>Tenés un entrenamiento a medias.</strong><br>
+        <strong>Tenés un entrenamiento a medias.</strong>
         Lo dejaste con ${abierta.series.length} ${abierta.series.length === 1 ? 'serie' : 'series'} registradas.
       </div>
-      <button type="button" class="principal ancho" data-retomar="1" style="margin-bottom:20px">Seguir donde estaba</button>
+      <button type="button" class="boton-cta" data-retomar="1" style="margin-bottom:24px">Seguir donde estaba</button>
     ` : ''}
 
-    ${tarjetas}
+    <div class="tarjeta" style="margin-top:24px">${filas}</div>
 
-    <p class="marca-version">
-      ${VERSION} · ${estaInstalada() ? 'instalada' : 'en el navegador'}
-    </p>
+    <div class="barra-inferior">
+      <button type="button" class="boton-cta" data-dia="${escapar(dia.id)}">Empezar entrenamiento</button>
+    </div>
+
+    ${otros ? `<div class="otros-dias"><span class="etiqueta">Otros días</span>${otros}</div>` : ''}
+
+    <p class="marca-version">${VERSION} · ${estaInstalada() ? 'instalada' : 'en el navegador'}</p>
     ${estaInstalada() ? '' : `
       <div class="aviso">
-        <strong>La estás viendo en el navegador.</strong><br>
-        Los bordes de la pantalla (lo que evita que el título quede abajo del Dynamic Island)
-        solo funcionan con la app instalada. Para verla como va a ser de verdad:
-        Compartir → Agregar a inicio, y abrila desde el ícono.
+        <strong>La estás viendo en el navegador.</strong> Los bordes de la pantalla solo
+        funcionan con la app instalada. Compartir → Agregar a inicio, y abrila desde el ícono.
       </div>`}`;
 }
 
+// ========================================================= pantalla PRIMERA VEZ
+
+function dibujarBienvenida() {
+  const opciones = [2, 3, 4, 5].map((n) => `
+    <button type="button" class="opcion-dia${n === diasElegidos ? ' elegida' : ''}" data-dias="${n}">
+      <span class="n">${n}</span>
+      <span class="txt">${n === 1 ? 'día' : 'días'}</span>
+    </button>`).join('');
+
+  $('pantalla-hoy').innerHTML = `
+    <div class="bienvenida">
+      <h1 class="frase-fuerte">Lo que no se anota,<br>no se repite.</h1>
+      <p class="secundario">
+        Anotá cada serie mientras entrenás. La app se encarga de decirte cuánto levantar
+        la próxima vez.
+      </p>
+
+      <span class="etiqueta" style="display:block;margin-top:36px">¿Cuántos días por semana?</span>
+      <div class="opciones-dias">${opciones}</div>
+
+      <button type="button" class="boton-cta" data-empezar="1">Ver mi rutina</button>
+    </div>
+    <p class="marca-version">${VERSION} · ${estaInstalada() ? 'instalada' : 'en el navegador'}</p>`;
+}
+
 $('pantalla-hoy').addEventListener('click', async (ev) => {
-  const destino = ev.target instanceof Element ? ev.target.closest('[data-dia],[data-retomar]') : null;
+  const destino = ev.target instanceof Element
+    ? ev.target.closest('[data-dia],[data-retomar],[data-dias],[data-empezar]')
+    : null;
   if (!(destino instanceof HTMLElement)) return;
+
+  if (destino.dataset.dias) {
+    diasElegidos = Number(destino.dataset.dias);
+    await guardarAjuste('diasPorSemana', diasElegidos);
+    dibujarBienvenida();
+    return;
+  }
+
+  if (destino.dataset.empezar) {
+    onboardingListo = true;
+    await guardarAjuste('onboardingListo', true);
+    dibujarHoy();
+    return;
+  }
 
   if (destino.dataset.retomar) {
     const abierta = sesionEnCurso(sesiones);
@@ -228,11 +297,10 @@ $('pantalla-hoy').addEventListener('click', async (ev) => {
   const diaId = destino.dataset.dia;
   if (!diaId) return;
 
-  const rutina = catalogo.rutinas[0];
   /** @type {Sesion} */
   const nueva = {
     id: crypto.randomUUID(),
-    rutinaId: rutina.id,
+    rutinaId: catalogo.rutinas[0].id,
     diaId,
     inicioTs: Date.now(),
     finTs: null,
@@ -252,32 +320,62 @@ function abrirSesion(/** @type {Sesion} */ sesion) {
 
 function dibujarHistorial() {
   const unilaterales = new Set(catalogo.ejercicios.filter((e) => e.esUnilateral).map((e) => e.id));
+  const invertidos = new Set(catalogo.ejercicios.filter((e) => e.admiteAsistencia).map((e) => e.id));
   const terminadas = sesionesTerminadas(sesiones);
+
+  const semana = semanaEntrenada(sesiones).map((d) => `
+    <div class="dia-semana">
+      <div class="inicial">${d.inicial}</div>
+      <div class="dia-cuadro${d.entrenado ? ' entrenado' : ''}${d.esHoy ? ' hoy' : ''}">
+        ${d.entrenado ? icono('tilde', 18) : ''}
+      </div>
+    </div>`).join('');
+
+  const cabecera = `
+    <span class="etiqueta">Esta semana</span>
+    <div class="semana">${semana}</div>`;
 
   if (terminadas.length === 0) {
     $('pantalla-historial').innerHTML = `
-      <h1>Historial</h1>
-      <p class="vacio">Todavía no hay entrenamientos guardados.<br>Cuando termines el primero, aparece acá.</p>`;
+      <h1 class="titulo-pantalla">Historial</h1>
+      ${cabecera}
+      <p class="vacio">Todavía no terminaste ningún entrenamiento.<br>
+      Cuando cierres el primero, aparece acá.</p>`;
     return;
   }
 
   const filas = terminadas.map((s) => {
     const r = resumenSesion(s, unilaterales);
-    const dia = catalogo.rutinaPorId.get(s.rutinaId);
-    const nombreDia = dia ? (dia.dias.find((d) => d.id === s.diaId) || {}).nombre : s.diaId;
-    const fecha = new Date(s.inicioTs).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
+    const rutina = catalogo.rutinaPorId.get(s.rutinaId);
+    const dia = rutina ? rutina.dias.find((d) => d.id === s.diaId) : null;
+    const fecha = new Date(s.inicioTs);
+    const completa = sesionCompleta(s, dia ? dia.ejercicios : []);
+    const record = esRecord(s, terminadas, invertidos);
+
     return `
-      <div class="tarjeta">
-        <span class="tarjeta-titulo">${escapar(nombreDia || '')} · ${escapar(fecha)}</span>
-        <span class="tarjeta-detalle">
-          ${r.series} series · ${r.ejercicios} ejercicios · ${r.volumenKg.toLocaleString('es-AR')} kg movidos${
-            r.duracionMin !== null ? ' · ' + r.duracionMin + ' min' : ''}
-        </span>
+      <div class="sesion-fila">
+        <div class="sesion-fecha">
+          <div class="dia">${fecha.getDate()}</div>
+          <div class="mes">${fecha.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')}</div>
+        </div>
+        <div class="sesion-linea"></div>
+        <div class="sesion-cuerpo">
+          <div class="sesion-titulo">
+            ${escapar(dia ? dia.nombre : s.diaId)}
+            ${record ? '<span class="marca record">Récord</span>' : ''}
+            ${!completa ? '<span class="marca incompleto">Incompleto</span>' : ''}
+          </div>
+          <div class="sesion-datos">
+            ${r.series} series · ${r.volumenKg.toLocaleString('es-AR')} kg${
+              r.duracionMin !== null ? ' · ' + r.duracionMin + ' min' : ''}
+          </div>
+        </div>
       </div>`;
   }).join('');
 
   $('pantalla-historial').innerHTML = `
-    <h1>Historial</h1>
-    <p class="sub">${terminadas.length} ${terminadas.length === 1 ? 'entrenamiento' : 'entrenamientos'}</p>
-    ${filas}`;
+    <h1 class="titulo-pantalla">Historial</h1>
+    ${cabecera}
+    <span class="etiqueta">${terminadas.length} ${terminadas.length === 1 ? 'entrenamiento' : 'entrenamientos'}</span>
+    <div style="margin-top:8px">${filas}</div>`;
 }

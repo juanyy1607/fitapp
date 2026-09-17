@@ -203,3 +203,98 @@ export function diasEntrenadosEnLosUltimos(sesiones, dias, ahoraTs = Date.now())
   }
   return fechas.size;
 }
+
+/**
+ * ¿La sesión completó todas las series que pedía el plan?
+ *
+ * Sirve para la etiqueta "INCOMPLETO" del historial. No es un reproche: es información.
+ * Una sesión corta sigue siendo una sesión, y marcarla distinto evita que el usuario mire
+ * su historial y no entienda por qué una tiene menos volumen que las otras.
+ *
+ * @param {Sesion} sesion
+ * @param {import('../tipos.js').EjercicioPlanificado[]} plan
+ * @returns {boolean}
+ */
+export function sesionCompleta(sesion, plan) {
+  if (!plan || plan.length === 0) return true;
+  return plan.every((p) => {
+    const hechas = sesion.series.filter((s) => s.ejercicioId === p.ejercicioId).length;
+    return hechas >= p.series;
+  });
+}
+
+/**
+ * ¿En esta sesión superó su mejor marca en algún ejercicio?
+ *
+ * Solo cuenta si ya había historial de ese ejercicio: la primera vez que hacés algo no es
+ * un récord, es simplemente la primera vez. Marcar eso como récord vaciaría la etiqueta de
+ * significado en la primera semana, que es justo cuando más importa que signifique algo.
+ *
+ * @param {Sesion} sesion
+ * @param {Sesion[]} sesionesPrevias       Solo las terminadas y anteriores a esta.
+ * @param {Set<string>} [ejerciciosInvertidos]  Ids donde MENOS es mejor (los asistidos).
+ * @returns {boolean}
+ */
+export function esRecord(sesion, sesionesPrevias, ejerciciosInvertidos) {
+  const previas = sesionesPrevias.filter((s) => s.inicioTs < sesion.inicioTs);
+
+  const ejerciciosDeHoy = new Set(sesion.series.map((s) => s.ejercicioId));
+
+  for (const ejercicioId of ejerciciosDeHoy) {
+    const invertido = !!(ejerciciosInvertidos && ejerciciosInvertidos.has(ejercicioId));
+
+    const pesosPrevios = previas
+      .flatMap((s) => s.series)
+      .filter((s) => s.ejercicioId === ejercicioId)
+      .map((s) => s.pesoKg);
+
+    if (pesosPrevios.length === 0) continue;   // primera vez: no es récord
+
+    const pesosHoy = sesion.series.filter((s) => s.ejercicioId === ejercicioId).map((s) => s.pesoKg);
+
+    if (invertido) {
+      // En un asistido, el récord es haber necesitado MENOS ayuda que nunca.
+      if (Math.min(...pesosHoy) < Math.min(...pesosPrevios)) return true;
+    } else {
+      if (Math.max(...pesosHoy) > Math.max(...pesosPrevios)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Los siete días de la semana en curso, para la tira del historial.
+ *
+ * La semana arranca el lunes, como se cuenta acá. Devuelve siempre siete elementos, en
+ * orden, con la inicial del día y si entrenó ese día.
+ *
+ * @param {Sesion[]} sesiones
+ * @param {number} [hoyTs]
+ * @returns {Array<{inicial: string, entrenado: boolean, esHoy: boolean, esFuturo: boolean}>}
+ */
+export function semanaEntrenada(sesiones, hoyTs = Date.now()) {
+  const INICIALES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+  const hoy = new Date(hoyTs);
+  hoy.setHours(0, 0, 0, 0);
+
+  // getDay() devuelve 0 para domingo; lo corremos para que el lunes sea el 0.
+  const diaDeLaSemana = (hoy.getDay() + 6) % 7;
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() - diaDeLaSemana);
+
+  const entrenados = new Set(
+    sesionesTerminadas(sesiones).map((s) => new Date(s.inicioTs).toDateString())
+  );
+
+  return INICIALES.map((inicial, i) => {
+    const dia = new Date(lunes);
+    dia.setDate(lunes.getDate() + i);
+    return {
+      inicial,
+      entrenado: entrenados.has(dia.toDateString()),
+      esHoy: i === diaDeLaSemana,
+      esFuturo: i > diaDeLaSemana
+    };
+  });
+}

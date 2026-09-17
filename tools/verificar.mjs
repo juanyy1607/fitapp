@@ -108,7 +108,7 @@ const JS_A_REVISAR = [
   'app.js', 'sw.js', 'tipos.js',
   'logica/progresion.js', 'logica/historial.js', 'logica/almacen.js',
   'logica/catalogo.js', 'logica/respaldo.js', 'logica/temporizador.js',
-  'pantallas/sesion.js',
+  'pantallas/sesion.js', 'iconos.js',
   'banco/db.js', 'banco/app.js', 'banco/sw.js'
 ];
 
@@ -167,6 +167,40 @@ titulo('5 · Se ve como una app y no como una página web');
  */
 
 const css = leer('estilos.css');
+
+/*
+ * Nada de emoji como íconos.
+ *
+ * Cada sistema dibuja los suyos, con distinto estilo, distinto peso y colores propios
+ * que pelean con el amarillo. Un emoji es el dibujo de otra persona metido en el medio
+ * de nuestra interfaz. Los íconos son SVG de trazo, todos en iconos.js.
+ */
+const ARCHIVOS_DE_PANTALLA = ['index.html', 'estilos.css', 'app.js', 'iconos.js', 'pantallas/sesion.js'];
+let conEmoji = 0;
+for (const archivo of ARCHIVOS_DE_PANTALLA) {
+  if (!hay(archivo)) continue;
+  const texto = leer(archivo);
+  const encontrados = texto.match(/\p{Extended_Pictographic}/gu);
+  if (encontrados) {
+    conEmoji++;
+    mal(archivo + ' tiene ' + encontrados.length + ' emoji (' + [...new Set(encontrados)].join(' ') +
+        '). Los íconos van como SVG de trazo en iconos.js.');
+  }
+}
+if (!conEmoji) bien('ningún emoji en la interfaz: los íconos son SVG de trazo');
+
+// Un solo color de acento. Si aparece un segundo, la señal amarilla deja de significar
+// algo: el usuario ya no sabe que el amarillo quiere decir 'esto pasó'.
+const coloresCrudos = (css.match(/#[0-9a-fA-F]{6}\b/g) || []).map((c) => c.toUpperCase());
+const PERMITIDOS = new Set(['#0D1011', '#13181A', '#171C1F', '#222A2E', '#2A3235', '#1E2427',
+  '#F0F3F4', '#97A2A7', '#5E696E', '#4A5458', '#FFC233', '#241D0C', '#4A3A14', '#E06A5A', '#16120A']);
+const intrusos = [...new Set(coloresCrudos)].filter((c) => !PERMITIDOS.has(c));
+if (intrusos.length) {
+  mal('estilos.css usa colores que no están en los tokens: ' + intrusos.join(', ') +
+      '. El amarillo es el único acento; si algo más tiene que destacarse, va con tamaño o peso.');
+} else {
+  bien('estilos.css usa solamente los colores de los tokens');
+}
 
 /*
  * La versión de app.js y la de sw.js tienen que ser la misma.
@@ -335,7 +369,7 @@ servidor.listen(0, '127.0.0.1', async () => {
     'datos/reglas.json', 'datos/ejercicios.json', 'datos/rutinas.json',
     'logica/progresion.js', 'logica/historial.js', 'logica/almacen.js',
     'logica/catalogo.js', 'logica/respaldo.js', 'logica/temporizador.js',
-    'pantallas/sesion.js'];
+    'iconos.js', 'pantallas/sesion.js'];
   const olvidados = enDisco.filter((f) => !lista.includes('./' + f));
   if (olvidados.length) olvidados.forEach((f) => mal(`${f} no está en la lista de precarga: no va a andar sin señal`));
   else bien('todos los archivos de la app están en la lista de precarga');

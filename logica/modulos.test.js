@@ -91,3 +91,23 @@ describe('los módulos nuevos de la app', () => {
     assert.equal(typeof m.crearPantallaSesion, 'function');
   });
 });
+
+describe('iconos.js', () => {
+  test('todos los íconos devuelven un SVG del mismo estilo', async () => {
+    const { icono, NOMBRES } = await import('../iconos.js');
+    assert.ok(NOMBRES.length >= 5, 'esperaba al menos cinco íconos');
+    for (const nombre of NOMBRES) {
+      const svg = icono(nombre);
+      assert.match(svg, /^<svg /, nombre + ' no devuelve un SVG');
+      assert.match(svg, /viewBox="0 0 24 24"/, nombre + ' no usa la grilla de 24');
+      assert.match(svg, /stroke="currentColor"/, nombre + ' no hereda el color del contenedor');
+      assert.match(svg, /stroke-width="2"/, nombre + ' no usa el trazo de 2');
+      assert.doesNotMatch(svg, /fill="(?!none)/, nombre + ' usa relleno: los íconos son de trazo');
+    }
+  });
+
+  test('un nombre que no existe devuelve vacío en vez de romper la pantalla', async () => {
+    const { icono } = await import('../iconos.js');
+    assert.equal(icono('no-existe'), '');
+  });
+});

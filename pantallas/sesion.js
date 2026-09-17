@@ -1,33 +1,34 @@
 // @ts-check
 /**
- * pantallas/sesion.js — La pantalla de entrenar. Es la más importante de la app.
+ * pantallas/sesion.js — La pantalla de entrenar. La más importante de la app.
  *
- * TODO lo de acá está subordinado a una sola cosa: **registrar una serie tiene que ser UN
- * TOQUE.** Escribir números en el teclado del celular con las manos transpiradas es la
- * razón número uno por la que la gente deja de registrar, y el que deja de registrar se
- * va: 82% de retención a 90 días para los que registran 5 o más días en su primera
- * semana, contra 12% para los que registran 0 o 1.
+ * TODO lo de acá está subordinado a que **registrar una serie sea UN TOQUE.** Escribir
+ * números en el teclado del celular con las manos transpiradas es la razón número uno por
+ * la que la gente deja de registrar, y el que deja de registrar se va: 82% de retención a
+ * 90 días para los que registran 5 o más días en su primera semana, contra 12% para los
+ * que registran 0 o 1.
  *
- * De ahí salen tres decisiones que conviene no deshacer sin pensarlo:
+ * Las cuatro reglas que no se rompen:
  *
- * 1. **El peso y las repeticiones vienen precargados.** En la primera serie, con lo que
- *    sugiere la progresión; en las siguientes, con lo que acabás de hacer. El camino
- *    normal es tocar "Listo" y nada más.
+ * 1. **El teclado numérico no se abre nunca.** Los ± saltan el incremento real del equipo,
+ *    así que es imposible tipear 400 en vez de 40 y es imposible registrar un peso que no
+ *    se puede armar con los discos que hay. Tocar el número abre el teclado, pero es la
+ *    salida de emergencia, no el camino esperado.
+ * 2. **"Listo" queda en la misma posición exacta** entre una serie y la siguiente. Por eso
+ *    los números tienen ancho mínimo fijo y los ± miden siempre lo mismo: si el layout se
+ *    corriera un pixel, se rompería el ritmo en la tarea más repetitiva de la app.
+ * 3. **Lo de la vez pasada se ve en la misma tarjeta donde se carga**, arriba a la derecha.
+ *    Ni en otra pantalla ni en un modal.
+ * 4. **Borrar una serie pide dos toques.**
  *
- * 2. **Para ajustar hay botones + y −, no teclado.** Y saltan de a lo que salta el equipo
- *    de verdad: 2,5 kg en barra, 2 en mancuernas, 5 en máquina. Tocar el número abre el
- *    teclado, pero eso es la salida de emergencia, no el camino esperado.
- *
- * 3. **El esfuerzo se pregunta una vez por ejercicio, no por serie.** Preguntarlo en cada
- *    serie serían unos 36 toques extra por sesión.
- *
- * El descanso está aparte a propósito: la pantalla solo le pide al temporizador que
- * arranque y le pregunta cuánto falta. Ver logica/temporizador.js.
+ * El descanso está aparte a propósito, en logica/temporizador.js: es lo único que Android
+ * puede obligarnos a rehacer.
  */
 
 import { sugerirCarga, modoDeCarga } from '../logica/progresion.js';
-import { intentosDeEjercicio, sesionesTerminadas } from '../logica/historial.js';
-import { nombreDeEjercicio, descansoDe, descansoDespuesDe } from '../logica/catalogo.js';
+import { intentosDeEjercicio, sesionesTerminadas, ultimoPorEjercicio } from '../logica/historial.js';
+import { descansoDe, descansoDespuesDe } from '../logica/catalogo.js';
+import { icono } from '../iconos.js';
 
 /** @typedef {import('../tipos.js').Sesion} Sesion */
 /** @typedef {import('../tipos.js').Ejercicio} Ejercicio */
@@ -39,6 +40,9 @@ const escapar = (/** @type {any} */ s) =>
 
 /** Muestra 42.5 como "42,5" y 40 como "40". */
 const nro = (/** @type {number} */ n) => String(Math.round(n * 100) / 100).replace('.', ',');
+
+/** "01", "02"… para la numeración de las listas. */
+const dosDigitos = (/** @type {number} */ n) => String(n).padStart(2, '0');
 
 /**
  * @param {Object} opciones
@@ -61,6 +65,8 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
   /** @type {'peso'|'reps'|null} */
   let editando = null;
   let esperandoEsfuerzo = false;
+  /** Índice de la serie que está esperando el segundo toque para borrarse. */
+  let borrandoSerie = -1;
   /** @type {any} */
   let tick = null;
 
@@ -84,11 +90,10 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     const p = planActual();
     const e = ejercicioActual();
     if (!p || !e) return null;
-    const intentos = intentosDeEjercicio(sesionesPrevias, p.ejercicioId);
-    return sugerirCarga(intentos, p, e, catalogo.reglas);
+    return sugerirCarga(intentosDeEjercicio(sesionesPrevias, p.ejercicioId), p, e, catalogo.reglas);
   }
 
-  /** De a cuánto se mueve el botón + y − del peso: lo que salta el equipo de verdad. */
+  /** De a cuánto se mueve el ± del peso: lo que salta el equipo de verdad. */
   function pasoDePeso() {
     const e = ejercicioActual();
     if (!e) return 1;
@@ -105,10 +110,8 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
 
   /**
    * Deja el peso y las repeticiones ya cargados, para que el usuario solo confirme.
-   *
-   * Primera serie: lo que sugiere la progresión.
-   * Series siguientes: lo que acaba de hacer. Es el mejor pronóstico que hay, y hace que
-   * las series 2 y 3 sean literalmente un toque.
+   * Primera serie: lo que sugiere la progresión. Siguientes: lo que acaba de hacer, que es
+   * el mejor pronóstico que hay y vuelve a las series 2 y 3 literalmente un toque.
    */
   function prepararBorrador() {
     const hechas = seriesHechas();
@@ -143,18 +146,37 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
 
     const eraLaUltima = hechas.length + 1 >= p.series;
 
-    // El descanso arranca solo. Entre series del mismo ejercicio es uno; al terminar el
-    // ejercicio es otro, más largo, porque hay que cambiar de aparato.
-    const segundos = eraLaUltima ? descansoDespuesDe(catalogo, p) : descansoDe(catalogo, p);
-    temporizador.arrancar(segundos, dibujar);
+    // El descanso arranca solo. Entre series es uno; al terminar el ejercicio es otro, más
+    // largo, porque hay que cambiar de aparato y capaz esperar que se desocupe.
+    temporizador.arrancar(eraLaUltima ? descansoDespuesDe(catalogo, p) : descansoDe(catalogo, p), dibujar);
     arrancarTick();
 
-    if (eraLaUltima) {
-      esperandoEsfuerzo = true;
-    } else {
-      prepararBorrador();
-    }
+    if (eraLaUltima) esperandoEsfuerzo = true;
+    else prepararBorrador();
+
     editando = null;
+    borrandoSerie = -1;
+    dibujar();
+  }
+
+  /** Regla 4: borrar pide dos toques. El primero arma, el segundo borra. */
+  async function tocarBorrar(/** @type {number} */ numero) {
+    if (borrandoSerie !== numero) { borrandoSerie = numero; dibujar(); return; }
+
+    const p = planActual();
+    if (!sesion || !p) return;
+
+    sesion.series = sesion.series.filter((s) => !(s.ejercicioId === p.ejercicioId && s.numero === numero));
+    // Las que quedan se renumeran, o quedarían huecos que no significan nada.
+    sesion.series
+      .filter((s) => s.ejercicioId === p.ejercicioId)
+      .sort((a, b) => a.numero - b.numero)
+      .forEach((s, i) => { s.numero = i + 1; });
+
+    await guardar(sesion);
+    borrandoSerie = -1;
+    esperandoEsfuerzo = false;
+    prepararBorrador();
     dibujar();
   }
 
@@ -162,12 +184,9 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
   async function responderEsfuerzo(valor) {
     const p = planActual();
     if (!sesion || !p) return;
-
-    // Queda en la última serie del ejercicio, que es donde se preguntó.
     const hechas = seriesHechas();
     if (hechas.length) hechas[hechas.length - 1].esfuerzo = valor;
     await guardar(sesion);
-
     esperandoEsfuerzo = false;
     avanzar();
   }
@@ -176,6 +195,7 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     indice++;
     if (indice < plan.length) prepararBorrador();
     editando = null;
+    borrandoSerie = -1;
     dibujar();
   }
 
@@ -188,16 +208,12 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     alTerminarSesion();
   }
 
-  // El descanso necesita redibujar la cuenta cada medio segundo. Cuando no hay descanso
-  // corriendo no hay ningún reloj andando: no gastamos batería de gusto.
+  // El descanso redibuja cada medio segundo. Sin descanso corriendo no hay ningún reloj
+  // andando: no gastamos batería de gusto.
   function arrancarTick() {
     detenerTick();
-    tick = setInterval(() => {
-      if (!temporizador.activo() && temporizador.sono()) { detenerTick(); }
-      dibujar();
-    }, 500);
+    tick = setInterval(dibujar, 500);
   }
-
   function detenerTick() {
     if (tick) { clearInterval(tick); tick = null; }
   }
@@ -209,25 +225,30 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
 
     const terminada = indice >= plan.length;
     contenedor.innerHTML =
-      dibujarCabecera() +
-      (terminada ? dibujarFinal() : (esperandoEsfuerzo ? dibujarEsfuerzo() : dibujarEjercicio())) +
+      (terminada ? dibujarFinal() : dibujarCabecera() + (esperandoEsfuerzo ? dibujarEsfuerzo() : dibujarEjercicio())) +
       dibujarDescanso();
 
-    // Si estábamos escribiendo un número a mano, el foco se pone solo.
     const entrada = contenedor.querySelector('.valor-entrada');
     if (entrada instanceof HTMLInputElement) { entrada.focus(); entrada.select(); }
   }
 
   function dibujarCabecera() {
-    const hechas = sesion ? sesion.series.length : 0;
-    const totalSeries = plan.reduce((n, p) => n + p.series, 0);
-    const pct = totalSeries ? Math.min(100, Math.round((hechas / totalSeries) * 100)) : 0;
+    const e = ejercicioActual();
+    const segmentos = plan.map((_, i) => {
+      const clase = i < indice ? 'hecho' : (i === indice ? 'actual' : '');
+      return '<div class="segmento ' + clase + '"></div>';
+    }).join('');
+
     return `
-      <div class="cabecera-sesion">
-        <span class="progreso">Ejercicio ${Math.min(indice + 1, plan.length)} de ${plan.length}</span>
-        <button type="button" data-accion="terminar-sesion">Terminar</button>
+      <div class="sesion-cabecera">
+        <div>
+          <span class="etiqueta">Ejercicio ${indice + 1} de ${plan.length}</span>
+          <h1 class="sesion-nombre">${escapar(e ? e.nombre : '')}</h1>
+        </div>
+        <button type="button" class="sesion-salir" data-accion="terminar-sesion"
+                aria-label="Terminar entrenamiento">${icono('cruz', 22)}</button>
       </div>
-      <div class="barra-progreso"><div style="width:${pct}%"></div></div>`;
+      <div class="segmentos">${segmentos}</div>`;
   }
 
   function dibujarEjercicio() {
@@ -236,71 +257,74 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     if (!p || !e || !borrador) return '';
 
     const hechas = seriesHechas();
-    const s = sugerenciaActual();
     const modo = modoDeCarga(e);
     const paso = pasoDePeso();
-    const piso = pisoDePeso();
-
-    const etiquetaPeso = modo === 'asistencia' ? 'Ayuda' : (modo === 'lastre' ? 'Lastre' : 'Peso');
     const sinPeso = modo === 'peso-corporal' || paso === 0;
+    const unidad = modo === 'asistencia' ? 'kg ayuda' : 'kg';
 
-    const fichas = hechas.map((h) => `
-      <span class="serie-hecha"><span class="n">${h.numero}</span>${
-        sinPeso ? '' : nro(h.pesoKg) + ' kg × '
-      }${h.reps}</span>`).join('');
+    const filasHechas = hechas.map((h) => `
+      <div class="hecha">
+        <span class="tilde">${icono('tilde', 14)}</span>
+        <span class="hecha-texto">Serie ${h.numero} · ${sinPeso ? '' : nro(h.pesoKg) + ' kg × '}${h.reps}</span>
+        <button type="button" class="hecha-borrar${borrandoSerie === h.numero ? ' confirmando' : ''}"
+                data-accion="borrar" data-numero="${h.numero}"
+                aria-label="${borrandoSerie === h.numero ? 'Tocá otra vez para borrar' : 'Borrar serie'}">
+          ${icono('tacho', 18)}
+        </button>
+      </div>`).join('');
 
-    const controlPeso = sinPeso ? '' : `
-      <div class="valor">
-        <span class="valor-etiqueta">${etiquetaPeso}</span>
+    // Regla 3: lo de la vez pasada, en la misma tarjeta.
+    const ultimaVez = ultimoPorEjercicio(sesionesPrevias).get(p.ejercicioId);
+
+    const bloquePeso = sinPeso ? '' : `
+      <div class="valor-bloque">
+        <button type="button" class="mas-menos grande" data-accion="paso" data-campo="peso" data-delta="-1"
+                ${borrador.pesoKg - paso < pisoDePeso() ? 'disabled' : ''} aria-label="Bajar peso">−</button>
         ${editando === 'peso'
           ? `<input class="valor-entrada" type="number" inputmode="decimal" step="${paso}" value="${borrador.pesoKg}" data-campo="peso">`
-          : `<button type="button" class="valor-numero" data-accion="editar" data-campo="peso">${nro(borrador.pesoKg)}<span class="unidad">kg</span></button>`}
-        <div class="pasos">
-          <button type="button" class="paso" data-accion="paso" data-campo="peso" data-delta="-1" ${borrador.pesoKg - paso < piso ? 'disabled' : ''}>−</button>
-          <button type="button" class="paso" data-accion="paso" data-campo="peso" data-delta="1">+</button>
-        </div>
-      </div>`;
+          : `<button type="button" class="peso-grande" data-accion="editar" data-campo="peso">${nro(borrador.pesoKg)}<span class="unidad">${unidad}</span></button>`}
+        <button type="button" class="mas-menos grande" data-accion="paso" data-campo="peso" data-delta="1"
+                aria-label="Subir peso">+</button>
+      </div>
+      <div class="separador"></div>`;
 
     return `
-      <h1 class="nombre-ejercicio">${escapar(e.nombre)}</h1>
-      <p class="plan-ejercicio">${p.series} series · ${p.repsMin} a ${p.repsMax} repeticiones</p>
+      ${filasHechas ? `<div class="hechas">${filasHechas}</div>` : ''}
 
-      ${s ? `<div class="sugerencia${s.advertencia ? ' advertencia' : ''}">${escapar(s.explicacion)}${
-        s.advertencia ? `<br><strong>Ojo:</strong> ${escapar(s.advertencia)}` : ''}</div>` : ''}
-
-      ${fichas ? `<div class="series-hechas">${fichas}</div>` : ''}
-
-      <div class="serie-actual">
-        <div class="serie-numero">Serie ${hechas.length + 1} de ${p.series}</div>
-        <div class="valores">
-          ${controlPeso}
-          <div class="valor">
-            <span class="valor-etiqueta">Repeticiones</span>
-            ${editando === 'reps'
-              ? `<input class="valor-entrada" type="number" inputmode="numeric" step="1" value="${borrador.reps}" data-campo="reps">`
-              : `<button type="button" class="valor-numero" data-accion="editar" data-campo="reps">${borrador.reps}</button>`}
-            <div class="pasos">
-              <button type="button" class="paso" data-accion="paso" data-campo="reps" data-delta="-1" ${borrador.reps <= 1 ? 'disabled' : ''}>−</button>
-              <button type="button" class="paso" data-accion="paso" data-campo="reps" data-delta="1">+</button>
-            </div>
-          </div>
+      <div class="tarjeta-serie">
+        <div class="tarjeta-serie-cabecera">
+          <span class="etiqueta">Serie ${hechas.length + 1} de ${p.series}</span>
+          ${ultimaVez ? `<span class="etiqueta vez-pasada">La vez pasada · ${nro(ultimaVez.pesoKg)} kg × ${ultimaVez.reps}</span>` : ''}
         </div>
-        <button type="button" class="confirmar" data-accion="confirmar">Listo</button>
-        ${e.esUnilateral ? '<p class="por-lado">Anotá el peso de UNA mancuerna y las repeticiones de UN lado.</p>' : ''}
+
+        ${bloquePeso}
+
+        <div class="valor-bloque">
+          <button type="button" class="mas-menos chico" data-accion="paso" data-campo="reps" data-delta="-1"
+                  ${borrador.reps <= 1 ? 'disabled' : ''} aria-label="Bajar repeticiones">−</button>
+          ${editando === 'reps'
+            ? `<input class="valor-entrada" type="number" inputmode="numeric" step="1" value="${borrador.reps}" data-campo="reps">`
+            : `<button type="button" class="reps-grande" data-accion="editar" data-campo="reps">${borrador.reps}<span class="unidad">reps</span></button>`}
+          <button type="button" class="mas-menos chico" data-accion="paso" data-campo="reps" data-delta="1"
+                  aria-label="Subir repeticiones">+</button>
+        </div>
+
+        ${e.esUnilateral ? '<p class="nota-lado">Anotá el peso de UNA mancuerna y las repeticiones de UN lado.</p>' : ''}
       </div>
 
-      ${hechas.length > 0 ? `<div class="fila-botones" style="margin-top:12px">
-        <button type="button" data-accion="terminar-ejercicio">Terminar este ejercicio</button>
-      </div>` : ''}`;
+      <div class="zona-confirmar">
+        <button type="button" class="boton-principal" data-accion="confirmar">Listo</button>
+      </div>`;
   }
 
   function dibujarEsfuerzo() {
     const e = ejercicioActual();
     return `
-      <div class="esfuerzo">
-        <h2>¿Cómo te fue con ${escapar(e ? e.nombre : 'este ejercicio')}?</h2>
-        <p class="sub">Una sola vez por ejercicio. Sirve para saber cuánto subir la próxima.</p>
-        <div class="esfuerzo-botones">
+      <div class="tarjeta-serie">
+        <span class="etiqueta">Terminaste el ejercicio</span>
+        <h2 style="font-size:20px;font-weight:700;margin:6px 0 0">¿Cómo te fue con ${escapar(e ? e.nombre : '')}?</h2>
+        <p class="secundario">Una sola vez por ejercicio. Sirve para saber cuánto subir la próxima.</p>
+        <div class="esfuerzo-opciones">
           <button type="button" data-accion="esfuerzo" data-valor="facil">Fácil
             <span class="detalle">Podía hacer varias repeticiones más</span></button>
           <button type="button" data-accion="esfuerzo" data-valor="justo">Justo
@@ -314,47 +338,78 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
   function dibujarFinal() {
     const series = sesion ? sesion.series.length : 0;
     return `
-      <h1 class="nombre-ejercicio">Terminaste</h1>
-      <p class="sub">${series} series registradas. Bien ahí.</p>
-      <button type="button" class="principal ancho" data-accion="terminar-sesion">Guardar y cerrar</button>`;
+      <span class="etiqueta">Entrenamiento terminado</span>
+      <h1 class="titulo-pantalla">Listo</h1>
+      <p class="secundario">${series} ${series === 1 ? 'serie registrada' : 'series registradas'}. Bien ahí.</p>
+      <div class="barra-inferior">
+        <button type="button" class="boton-principal" data-accion="terminar-sesion">Guardar y cerrar</button>
+      </div>`;
   }
 
   /*
    * EL MOMENTO DEL DESCANSO — PROVISORIO A PROPÓSITO.
    *
-   * Este pedazo es lo único que falta diseñar de verdad, y no se puede decidir todavía: si
-   * la alarma aguanta con el teléfono en el bolsillo en Android, esto tiene que estar
-   * pensado para guardar el teléfono; si no aguanta, tiene que estar pensado para
-   * mirarlo. Son dos diseños opuestos.
-   *
-   * Hasta tener ese dato, una barra mínima que muestra la cuenta y deja seguir.
+   * Es lo único que falta diseñar de verdad, y no se puede decidir todavía: si la alarma
+   * aguanta con el teléfono en el bolsillo en Android, esto tiene que estar pensado para
+   * guardar el teléfono; si no aguanta, para mirarlo. Son dos diseños opuestos.
    */
   function dibujarDescanso() {
     const restante = temporizador.restanteMs();
     if (restante === null) return '';
     if (restante <= -10000) return '';   // a los 10 s de sonar, se va sola
 
-    const problema = temporizador.problema();
+    const total = Math.max(1, temporizador.totalSegundos());
     const seg = Math.max(0, Math.ceil(restante / 1000));
     const mm = String(Math.floor(seg / 60)).padStart(2, '0');
     const ss = String(seg % 60).padStart(2, '0');
     const sono = restante <= 0;
 
+    const RADIO = 104;
+    const VUELTA = 2 * Math.PI * RADIO;
+    const avance = Math.min(1, Math.max(0, seg / total));
+
+    const p = planActual();
+    const siguiente = esperandoEsfuerzo
+      ? (plan[indice + 1] ? (catalogo.ejercicioPorId.get(plan[indice + 1].ejercicioId) || {}).nombre : 'Terminar')
+      : (p && borrador ? 'Serie ' + (seriesHechas().length + 1) + ' de ' + p.series : '');
+    const valorSiguiente = !esperandoEsfuerzo && borrador ? nro(borrador.pesoKg) + ' kg × ' + borrador.reps : '';
+
+    const problema = temporizador.problema();
+
     return `
-      <div class="descanso${sono ? ' sono' : ''}">
-        <span class="descanso-numero">${sono ? '¡Dale!' : mm + ':' + ss}</span>
-        <span class="descanso-texto">
-          ${problema ? escapar(problema) : (sono ? 'Se terminó el descanso.' : 'Descansando')}
-          <br><span class="descanso-provisorio">diseño provisorio · falta el dato de Android</span>
-        </span>
-        <button type="button" data-accion="saltar-descanso">${sono ? 'Listo' : 'Saltar'}</button>
+      <div class="descanso">
+        <div class="anillo">
+          <svg viewBox="0 0 236 236">
+            <circle class="anillo-pista" cx="118" cy="118" r="${RADIO}" fill="none" stroke-width="10"/>
+            <circle class="anillo-progreso" cx="118" cy="118" r="${RADIO}" fill="none" stroke-width="10"
+                    stroke-linecap="round" stroke-dasharray="${VUELTA.toFixed(1)}"
+                    stroke-dashoffset="${(VUELTA * (1 - avance)).toFixed(1)}"/>
+          </svg>
+          <div class="anillo-numero">${sono ? '00:00' : mm + ':' + ss}</div>
+        </div>
+
+        <div class="ajuste-tiempo">
+          <button type="button" data-accion="ajustar" data-delta="-30">−30 s</button>
+          <button type="button" data-accion="ajustar" data-delta="30">+30 s</button>
+        </div>
+
+        <div class="despues">
+          <span class="etiqueta">Después</span>
+          <div class="despues-valor">${escapar(siguiente)}${valorSiguiente ? ' · ' + valorSiguiente : ''}</div>
+        </div>
+
+        ${problema ? `<p class="descanso-provisorio">${escapar(problema)}</p>` : ''}
+        <button type="button" class="boton-borde" data-accion="saltar-descanso">
+          ${sono ? 'Seguir' : 'Saltar descanso'}
+        </button>
+        <p class="descanso-provisorio">Diseño provisorio · falta el dato de Android</p>
       </div>`;
   }
 
   // ------------------------------------------------------------------ eventos
 
   // Un solo escuchador para toda la pantalla. Como el HTML se redibuja entero, enganchar
-  // los botones de a uno obligaría a re-enganchar cada vez; así se hace una sola vez.
+  // los botones de a uno obligaría a re-engancharlos cada vez.
   contenedor.addEventListener('click', (ev) => {
     const destino = ev.target instanceof Element ? ev.target.closest('[data-accion]') : null;
     if (!(destino instanceof HTMLElement)) return;
@@ -375,13 +430,13 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
 
     if (accion === 'editar' && (campo === 'peso' || campo === 'reps')) { editando = campo; dibujar(); }
     if (accion === 'confirmar') confirmarSerie();
+    if (accion === 'borrar') tocarBorrar(Number(destino.dataset.numero));
     if (accion === 'esfuerzo') responderEsfuerzo(/** @type {any} */ (destino.dataset.valor));
-    if (accion === 'terminar-ejercicio') { esperandoEsfuerzo = true; dibujar(); }
     if (accion === 'terminar-sesion') terminarSesion();
+    if (accion === 'ajustar') { temporizador.ajustar(Number(destino.dataset.delta) || 0); dibujar(); }
     if (accion === 'saltar-descanso') { temporizador.cancelar(); detenerTick(); dibujar(); }
   });
 
-  // Al escribir un número a mano, se toma al salir del campo o al apretar Enter.
   contenedor.addEventListener('change', (ev) => {
     const entrada = ev.target;
     if (!(entrada instanceof HTMLInputElement) || !borrador) return;
@@ -404,18 +459,18 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
   return {
     /**
      * @param {Sesion} laSesion
-     * @param {Sesion[]} todasLasSesiones  Para calcular las sugerencias.
+     * @param {Sesion[]} todasLasSesiones
      */
     abrir(laSesion, todasLasSesiones) {
       sesion = laSesion;
       sesionesPrevias = sesionesTerminadas(todasLasSesiones).filter((s) => s.id !== laSesion.id);
 
-      const dia = catalogo.rutinaPorId.get(laSesion.rutinaId);
-      const d = dia ? dia.dias.find((x) => x.id === laSesion.diaId) : null;
-      plan = d ? d.ejercicios : [];
+      const rutina = catalogo.rutinaPorId.get(laSesion.rutinaId);
+      const dia = rutina ? rutina.dias.find((x) => x.id === laSesion.diaId) : null;
+      plan = dia ? dia.ejercicios : [];
 
-      // Si la sesión venía a medias (cerró la app en el gimnasio), retomamos donde estaba:
-      // el primer ejercicio al que le falten series.
+      // Si la sesión venía a medias (cerraste la app en el gimnasio), retomamos en el
+      // primer ejercicio al que le falten series.
       indice = plan.findIndex((p) => {
         const hechas = laSesion.series.filter((s) => s.ejercicioId === p.ejercicioId).length;
         return hechas < p.series;
@@ -424,6 +479,7 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
 
       esperandoEsfuerzo = false;
       editando = null;
+      borrandoSerie = -1;
       if (indice < plan.length) prepararBorrador();
       dibujar();
     },
@@ -435,13 +491,7 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
       contenedor.innerHTML = '';
     },
 
-    /** Para que la app avise cuando vuelve del segundo plano. */
-    refrescar: dibujar,
-
-    /** El nombre del ejercicio actual, para mostrarlo en otro lado si hiciera falta. */
-    ejercicioActualNombre() {
-      const p = planActual();
-      return p ? nombreDeEjercicio(catalogo, p.ejercicioId) : '';
-    }
+    /** Para que la app redibuje al volver del segundo plano. */
+    refrescar: dibujar
   };
 }

@@ -3,14 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>FitApp</title>
+<title>Fitapp</title>
 <meta name="description" content="Registrá tus entrenamientos. Funciona sin señal.">
 
 <link rel="manifest" href="manifest.webmanifest">
+
+<!-- Las fuentes vienen de Google. El service worker las guarda en la primera apertura con
+     señal, así que después funcionan en el subsuelo. Si aun así no llegaran, las pilas de
+     respaldo de estilos.css hacen que la app se vea bien igual, solo que con otra letra. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500;600;700;900&family=Chivo+Mono:wght@400;500;700&display=swap">
+
 <link rel="stylesheet" href="estilos.css">
 
 <!-- iOS ignora buena parte del manifest. Estas son las que hacen que, al agregarla a la
-     pantalla de inicio en iPhone, abra sin la barra de Safari. -->
+     pantalla de inicio en iPhone, abra sin la barra de Safari y respete los bordes. -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Fitapp">
@@ -24,7 +32,7 @@
 <div id="error" class="error-fatal" hidden></div>
 
 <main id="app" hidden>
-  <!-- Pantalla 1 · Elegir qué entrenar hoy -->
+  <!-- Pantalla 1 · Qué entrenar hoy (o la bienvenida, la primera vez) -->
   <section id="pantalla-hoy" class="pantalla"></section>
 
   <!-- Pantalla 2 · La sesión en curso. Es la que importa. -->
@@ -34,10 +42,7 @@
   <section id="pantalla-historial" class="pantalla" hidden></section>
 </main>
 
-<nav id="navegacion" class="nav" hidden>
-  <button type="button" data-ir="hoy" class="nav-boton activo">Hoy</button>
-  <button type="button" data-ir="historial" class="nav-boton">Historial</button>
-</nav>
+<nav id="navegacion" class="nav" hidden></nav>
 
 <script type="module" src="app.js"></script>
 </body>

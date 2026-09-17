@@ -18,8 +18,18 @@
  * sw.js cambió. Si solo tocás estilos.css, sw.js queda igual, el navegador no se entera
  * de nada, y seguís viendo lo viejo. Cambiar este número cambia el archivo.
  */
-var VERSION = 'v3';
+var VERSION = 'v4';
 var CACHE = 'fitapp-' + VERSION;
+
+/*
+ * Las fuentes van en un caché aparte y NO se borra al cambiar de versión.
+ *
+ * Son archivos grandes que no cambian nunca, y volver a bajarlos en cada versión sería
+ * regalar datos móviles. Además: si se borraran junto con el resto, alguien que actualiza
+ * la app en el gimnasio sin señal se quedaría sin tipografía.
+ */
+var CACHE_FUENTES = 'fitapp-fuentes';
+var HOSTS_FUENTES = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
 /*
  * Todo lo que tiene que estar guardado para que la app abra sin conexión.
@@ -33,6 +43,7 @@ var ARCHIVOS = [
   './index.html',
   './estilos.css',
   './app.js',
+  './iconos.js',
   './tipos.js',
   './manifest.webmanifest',
 
@@ -68,7 +79,8 @@ self.addEventListener('activate', function (evento) {
     caches.keys()
       .then(function (claves) {
         return Promise.all(claves.map(function (k) {
-          return k === CACHE ? null : caches.delete(k);
+          if (k === CACHE || k === CACHE_FUENTES) return null;
+          return caches.delete(k);
         }));
       })
       .then(function () { return self.clients.claim(); })
@@ -88,7 +100,30 @@ self.addEventListener('activate', function (evento) {
 self.addEventListener('fetch', function (evento) {
   var req = evento.request;
   if (req.method !== 'GET') return;
-  if (new URL(req.url).origin !== self.location.origin) return;
+
+  var url = new URL(req.url);
+
+  /*
+   * Las fuentes vienen de Google, o sea de otro dominio. Las guardamos en la primera
+   * apertura con señal para que después la app se vea igual en el subsuelo del gimnasio.
+   * Si nunca llegaron a bajarse, no pasa nada: estilos.css tiene pilas de respaldo y la
+   * app se ve bien con otra tipografía.
+   */
+  if (HOSTS_FUENTES.indexOf(url.hostname) !== -1) {
+    evento.respondWith(
+      caches.match(req).then(function (cacheado) {
+        if (cacheado) return cacheado;
+        return fetch(req).then(function (respuesta) {
+          var copia = respuesta.clone();
+          caches.open(CACHE_FUENTES).then(function (c) { c.put(req, copia); });
+          return respuesta;
+        }).catch(function () { return cacheado; });
+      })
+    );
+    return;
+  }
+
+  if (url.origin !== self.location.origin) return;
 
   evento.respondWith(
     caches.match(req).then(function (cacheado) {

@@ -16,7 +16,8 @@ import { fileURLToPath } from 'node:url';
 
 import {
   sesionesTerminadas, sesionEnCurso, pesoPredominante, intentosDeEjercicio,
-  ultimoPorEjercicio, volumenTotal, resumenSesion, diasEntrenadosEnLosUltimos
+  ultimoPorEjercicio, volumenTotal, resumenSesion, diasEntrenadosEnLosUltimos,
+  sesionCompleta, esRecord, semanaEntrenada
 } from './historial.js';
 import { sugerirCarga } from './progresion.js';
 
@@ -262,5 +263,121 @@ describe('volumen con ejercicios unilaterales', () => {
     const marcados = catalogo.filter((e) => e.esUnilateral).map((e) => e.id);
     assert.ok(marcados.includes('curl-mancuernas'), 'el curl con mancuernas es unilateral');
     assert.ok(marcados.length >= 3, 'tendría que haber varios unilaterales en el catálogo');
+  });
+});
+
+// =====================================================================
+// Lo que necesita el historial nuevo: récord, incompleto y la tira de la semana.
+// =====================================================================
+
+describe('sesionCompleta', () => {
+  const plan = [
+    { ejercicioId: 'press-banca', series: 3, repsMin: 8, repsMax: 12, descansoSeg: 120 },
+    { ejercicioId: 'sentadilla', series: 3, repsMin: 8, repsMax: 12, descansoSeg: 120 }
+  ];
+
+  test('con todas las series hechas, está completa', () => {
+    const s = sesion({ inicioTs: HOY, series: [
+      ['press-banca', 1, 40, 10], ['press-banca', 2, 40, 10], ['press-banca', 3, 40, 10],
+      ['sentadilla', 1, 60, 10], ['sentadilla', 2, 60, 10], ['sentadilla', 3, 60, 10]
+    ] });
+    assert.equal(sesionCompleta(s, plan), true);
+  });
+
+  test('si falta una serie de un ejercicio, está incompleta', () => {
+    const s = sesion({ inicioTs: HOY, series: [
+      ['press-banca', 1, 40, 10], ['press-banca', 2, 40, 10], ['press-banca', 3, 40, 10],
+      ['sentadilla', 1, 60, 10], ['sentadilla', 2, 60, 10]
+    ] });
+    assert.equal(sesionCompleta(s, plan), false);
+  });
+
+  test('si se salteó un ejercicio entero, está incompleta', () => {
+    const s = sesion({ inicioTs: HOY, series: [
+      ['press-banca', 1, 40, 10], ['press-banca', 2, 40, 10], ['press-banca', 3, 40, 10]
+    ] });
+    assert.equal(sesionCompleta(s, plan), false);
+  });
+
+  test('sin plan no se rompe', () => {
+    assert.equal(sesionCompleta(sesion({ inicioTs: HOY, series: [] }), []), true);
+  });
+});
+
+describe('esRecord', () => {
+  const previa = sesion({ inicioTs: HOY - 7 * DIA, series: [['press-banca', 1, 40, 10]] });
+
+  test('superar el mejor peso es récord', () => {
+    const hoy = sesion({ inicioTs: HOY, series: [['press-banca', 1, 42.5, 8]] });
+    assert.equal(esRecord(hoy, [previa]), true);
+  });
+
+  test('igualar no es récord', () => {
+    const hoy = sesion({ inicioTs: HOY, series: [['press-banca', 1, 40, 12]] });
+    assert.equal(esRecord(hoy, [previa]), false);
+  });
+
+  test('la primera vez que hacés un ejercicio NO es récord', () => {
+    // Si no, la primera semana entera saldría marcada y la etiqueta no querría decir nada.
+    const hoy = sesion({ inicioTs: HOY, series: [['prensa', 1, 100, 10]] });
+    assert.equal(esRecord(hoy, [previa]), false);
+  });
+
+  test('no mira sesiones posteriores a la que se evalúa', () => {
+    const futura = sesion({ inicioTs: HOY + DIA, series: [['press-banca', 1, 100, 5]] });
+    const hoy = sesion({ inicioTs: HOY, series: [['press-banca', 1, 42.5, 8]] });
+    assert.equal(esRecord(hoy, [previa, futura]), true);
+  });
+
+  test('en un asistido, el récord es necesitar MENOS ayuda', () => {
+    const invertidos = new Set(['dominadas-asistidas']);
+    const antes = sesion({ inicioTs: HOY - DIA, series: [['dominadas-asistidas', 1, 30, 8]] });
+    const menos = sesion({ inicioTs: HOY, series: [['dominadas-asistidas', 1, 25, 8]] });
+    const mas = sesion({ inicioTs: HOY, series: [['dominadas-asistidas', 1, 35, 8]] });
+    assert.equal(esRecord(menos, [antes], invertidos), true, 'menos ayuda es mejor');
+    assert.equal(esRecord(mas, [antes], invertidos), false, 'más ayuda no es récord');
+  });
+
+  test('sin historial previo no hay récord', () => {
+    assert.equal(esRecord(sesion({ inicioTs: HOY, series: [['press-banca', 1, 40, 10]] }), []), false);
+  });
+});
+
+describe('semanaEntrenada', () => {
+  // 2026-09-16 cae miércoles.
+  const MIERCOLES = Date.parse('2026-09-16T15:00:00');
+
+  test('devuelve siempre siete días, de lunes a domingo', () => {
+    const semana = semanaEntrenada([], MIERCOLES);
+    assert.equal(semana.length, 7);
+    assert.deepEqual(semana.map((d) => d.inicial), ['L', 'M', 'M', 'J', 'V', 'S', 'D']);
+  });
+
+  test('marca hoy en el lugar correcto', () => {
+    const semana = semanaEntrenada([], MIERCOLES);
+    assert.equal(semana.findIndex((d) => d.esHoy), 2, 'el miércoles es el tercer casillero');
+  });
+
+  test('marca los días que entrenó', () => {
+    const lunes = Date.parse('2026-09-14T10:00:00');
+    const semana = semanaEntrenada([sesion({ inicioTs: lunes, series: [] })], MIERCOLES);
+    assert.equal(semana[0].entrenado, true);
+    assert.equal(semana[1].entrenado, false);
+  });
+
+  test('los días que todavía no llegaron quedan marcados como futuros', () => {
+    const semana = semanaEntrenada([], MIERCOLES);
+    assert.deepEqual(semana.map((d) => d.esFuturo), [false, false, false, true, true, true, true]);
+  });
+
+  test('una sesión de la semana pasada no cuenta', () => {
+    const semanaPasada = Date.parse('2026-09-08T10:00:00');
+    const semana = semanaEntrenada([sesion({ inicioTs: semanaPasada, series: [] })], MIERCOLES);
+    assert.equal(semana.some((d) => d.entrenado), false);
+  });
+
+  test('la sesión en curso todavía no marca el día', () => {
+    const s = sesion({ inicioTs: MIERCOLES, finTs: null, series: [] });
+    assert.equal(semanaEntrenada([s], MIERCOLES)[2].entrenado, false);
   });
 });

@@ -92,8 +92,10 @@ export function construirWavAlarma(segundosSilencio) {
 /**
  * @typedef {Object} Temporizador
  * @property {(segundos: number, alTerminar?: () => void) => Promise<void>} arrancar
+ * @property {(deltaSegundos: number) => void} ajustar  Suma o resta tiempo al descanso en curso.
  * @property {() => void} cancelar
  * @property {() => number|null} restanteMs   null si no hay nada corriendo.
+ * @property {() => number} totalSegundos     Lo que dura el descanso actual, para el anillo.
  * @property {() => boolean} activo
  * @property {() => boolean} sono             Si la alarma ya empezó a sonar.
  * @property {() => string|null} problema     Mensaje si el audio no pudo arrancar.
@@ -115,6 +117,9 @@ export function crearTemporizador() {
   let yaSono = false;
   /** @type {string|null} */
   let problema = null;
+  let total = 0;
+  /** @type {(() => void)|undefined} */
+  let avisarAlTerminar;
 
   function limpiar() {
     if (aviso) { clearTimeout(aviso); aviso = null; }
@@ -137,6 +142,8 @@ export function crearTemporizador() {
       limpiar();
       yaSono = false;
       problema = null;
+      total = segundos;
+      if (alTerminar) avisarAlTerminar = alTerminar;
       venceEn = Date.now() + segundos * 1000;
 
       try {
@@ -171,13 +178,33 @@ export function crearTemporizador() {
       }, segundos * 1000);
     },
 
+    /*
+     * Sumar o restar tiempo obliga a rehacer el archivo de audio entero, porque la alarma
+     * está adentro, en un lugar fijo. No alcanza con mover un contador: hay que fabricar
+     * un WAV nuevo con el silencio del largo correcto y volver a arrancarlo.
+     *
+     * Es el precio de que el tiempo lo lleve el hardware de audio y no el JavaScript. Vale
+     * la pena: es lo único que hace sonar la alarma con el teléfono en el bolsillo.
+     */
+    ajustar(deltaSegundos) {
+      const restante = this.restanteMs();
+      if (restante === null) return;
+      const nuevo = Math.max(5, Math.round(restante / 1000) + deltaSegundos);
+      this.arrancar(nuevo, avisarAlTerminar);
+    },
+
     cancelar() {
       limpiar();
       yaSono = false;
+      total = 0;
     },
 
     restanteMs() {
       return venceEn === null ? null : venceEn - Date.now();
+    },
+
+    totalSegundos() {
+      return total;
     },
 
     activo() {
