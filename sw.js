@@ -9,7 +9,17 @@
  * El banco de pruebas tiene el suyo en banco/sw.js, con su propio alcance.
  */
 
-var CACHE = 'fitapp-v1';
+/*
+ * VERSIÓN — subila con cada cambio que quieras ver en el teléfono.
+ *
+ * Tiene que coincidir con la VERSION de app.js; el verificador lo revisa.
+ *
+ * Por qué hace falta: el navegador solo busca un service worker nuevo si el ARCHIVO
+ * sw.js cambió. Si solo tocás estilos.css, sw.js queda igual, el navegador no se entera
+ * de nada, y seguís viendo lo viejo. Cambiar este número cambia el archivo.
+ */
+var VERSION = 'v3';
+var CACHE = 'fitapp-' + VERSION;
 
 /*
  * Todo lo que tiene que estar guardado para que la app abra sin conexión.
@@ -82,7 +92,16 @@ self.addEventListener('fetch', function (evento) {
 
   evento.respondWith(
     caches.match(req).then(function (cacheado) {
-      var desdeRed = fetch(req).then(function (respuesta) {
+      /*
+       * `cache: 'no-cache'` no es opcional acá.
+       *
+       * GitHub Pages manda los archivos con `max-age=600`. Sin esta opción, este fetch le
+       * pega al caché del navegador y durante diez minutos devuelve el archivo VIEJO, con
+       * lo cual guardaríamos de nuevo lo mismo que ya teníamos y la versión nueva no
+       * llegaría nunca. Con 'no-cache' le pregunta al servidor siempre.
+       */
+      var pedido = new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' });
+      var desdeRed = fetch(pedido).then(function (respuesta) {
         if (respuesta && respuesta.ok) {
           var copia = respuesta.clone();
           caches.open(CACHE).then(function (c) { c.put(req, copia); });

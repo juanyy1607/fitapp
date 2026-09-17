@@ -168,6 +168,34 @@ titulo('5 · Se ve como una app y no como una página web');
 
 const css = leer('estilos.css');
 
+/*
+ * La versión de app.js y la de sw.js tienen que ser la misma.
+ *
+ * Esto existe porque nos pasó: se cambió estilos.css, sw.js quedó igual, el navegador no
+ * se enteró de que había algo nuevo, y en el teléfono se siguió viendo lo viejo. Subir
+ * este número es lo que hace que el archivo del service worker cambie y el teléfono
+ * busque la versión nueva.
+ */
+const versionApp = app.match(/const VERSION = '([^']+)'/);
+const versionSw = leer('sw.js').match(/var VERSION = '([^']+)'/);
+
+if (!versionApp) mal('app.js no define VERSION');
+else if (!versionSw) mal('sw.js no define VERSION');
+else if (versionApp[1] !== versionSw[1]) {
+  mal('app.js dice ' + versionApp[1] + ' y sw.js dice ' + versionSw[1] + '. Tienen que ser iguales, ' +
+      'o la marca que se ve en pantalla va a mentir sobre qué versión está corriendo.');
+} else {
+  bien('la versión de app.js y sw.js coinciden (' + versionApp[1] + ')');
+}
+
+// Sin esto, el service worker vuelve a guardar el archivo viejo que tiene el navegador
+// en su propio caché, y la versión nueva no llega nunca al teléfono.
+if (/cache:\s*'no-cache'/.test(leer('sw.js'))) {
+  bien("sw.js revalida con cache: 'no-cache' (si no, GitHub sirve lo viejo 10 minutos)");
+} else {
+  mal("sw.js no usa cache: 'no-cache' al revalidar: los cambios pueden tardar 10 minutos en llegar");
+}
+
 if (/viewport-fit\s*=\s*cover/.test(html)) {
   bien('el viewport lleva viewport-fit=cover');
 } else {

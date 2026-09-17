@@ -22,7 +22,28 @@ import { crearPantallaSesion } from './pantallas/sesion.js';
 /** @typedef {import('./tipos.js').Sesion} Sesion */
 /** @typedef {import('./logica/catalogo.js').Catalogo} Catalogo */
 
+/**
+ * VERSIÓN — tiene que coincidir con la de sw.js. El verificador lo revisa.
+ *
+ * Se muestra abajo de todo en la pantalla de Hoy. Parece un detalle, pero sin esto no hay
+ * forma de saber si lo que estás mirando en el teléfono es la versión nueva o una vieja
+ * que quedó guardada, y se pierde media hora discutiendo si un cambio se aplicó o no.
+ */
+const VERSION = 'v3';
+
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
+
+/**
+ * ¿Está abierta desde el ícono de la pantalla de inicio, o es una pestaña del navegador?
+ *
+ * Importa más de lo que parece: las zonas seguras (lo que evita que el título quede abajo
+ * del Dynamic Island) SOLO existen en modo instalado. En una pestaña de Safari valen cero,
+ * así que todo el trabajo de bordes no se ve.
+ */
+function estaInstalada() {
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+         /** @type {any} */ (window.navigator).standalone === true;
+}
 
 const escapar = (/** @type {any} */ s) =>
   String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -90,6 +111,18 @@ function mostrarErrorFatal(/** @type {any} */ e) {
 
 function registrarServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
+
+  // Si ya había uno controlando la página, entonces un cambio de controlador quiere decir
+  // que entró una versión nueva. En ese caso recargamos sola para que la veas, en vez de
+  // dejarte mirando la anterior sin saberlo.
+  const habiaControlador = !!navigator.serviceWorker.controller;
+  let recargando = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!habiaControlador || recargando) return;
+    recargando = true;
+    location.reload();
+  });
+
   navigator.serviceWorker.register('sw.js').catch(() => {
     // Sin service worker la app funciona, pero no abre sin señal. No es para frenar todo.
   });
@@ -168,7 +201,18 @@ function dibujarHoy() {
       <button type="button" class="principal ancho" data-retomar="1" style="margin-bottom:20px">Seguir donde estaba</button>
     ` : ''}
 
-    ${tarjetas}`;
+    ${tarjetas}
+
+    <p class="marca-version">
+      ${VERSION} · ${estaInstalada() ? 'instalada' : 'en el navegador'}
+    </p>
+    ${estaInstalada() ? '' : `
+      <div class="aviso">
+        <strong>La estás viendo en el navegador.</strong><br>
+        Los bordes de la pantalla (lo que evita que el título quede abajo del Dynamic Island)
+        solo funcionan con la app instalada. Para verla como va a ser de verdad:
+        Compartir → Agregar a inicio, y abrila desde el ícono.
+      </div>`}`;
 }
 
 $('pantalla-hoy').addEventListener('click', async (ev) => {

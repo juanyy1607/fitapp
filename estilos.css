@@ -360,3 +360,15 @@ button:disabled { opacity: 0.4; }
   font-size: 0.85rem;
 }
 .nav-boton.activo { color: var(--acento); }
+
+/* La marca de versión. Chiquita y gris, pero imprescindible mientras iteramos: sin esto
+   no hay forma de saber si el teléfono está mostrando lo último o algo que quedó
+   guardado, y se discute media hora si un cambio se aplicó o no. */
+.marca-version {
+  color: var(--texto-4, #4A5458);
+  font-size: 0.7rem;
+  text-align: center;
+  margin: 28px 0 0;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
