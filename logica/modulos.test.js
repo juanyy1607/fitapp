@@ -20,7 +20,9 @@ import assert from 'node:assert/strict';
 describe('todos los módulos cargan y exportan lo que dicen', () => {
   test('progresion.js', async () => {
     const m = await import('./progresion.js');
-    for (const nombre of ['sugerirCarga', 'redondearACargaPosible', 'completoElRango', 'fallosSeguidos', 'redondear2', 'modoDeCarga', 'pesoInicialDe']) {
+    for (const nombre of ['sugerirCarga', 'redondearACargaPosible', 'todasAlTecho',
+                          'objetivosIniciales', 'avanzarObjetivos', 'describirObjetivos',
+                          'redondear2', 'modoDeCarga', 'equipoDeCarga', 'saltoDe']) {
       assert.equal(typeof m[nombre], 'function', 'falta exportar ' + nombre);
     }
   });

@@ -1,26 +1,47 @@
 // @ts-check
 /**
- * logica/progresion.js — Cuánto peso sugerirle al usuario en el próximo ejercicio.
+ * logica/progresion.js — Qué objetivo de repeticiones y qué peso le toca al usuario.
  *
  * Es el único lugar del proyecto donde un error es INVISIBLE. Si una pantalla se rompe,
  * la ves. Si esto sugiere 42,5 kg donde correspondían 45, entrenás seis semanas mal y no
  * te enterás nunca. Por eso está separado, no toca la pantalla ni la base, y tiene tests.
  *
- * El esquema es "doble progresión", y los números los pone el socio en datos/reglas.json:
- *   1. Te quedás con el mismo peso hasta llegar al techo de repeticiones en TODAS las series.
- *   2. Cuando lo lográs, sube el peso y volvés al piso de repeticiones.
- *   3. Si te estancás varias sesiones seguidas, baja el peso y volvés a subir desde ahí.
+ * ------------------------------------------------------------------------------------
+ * LA REGLA, que la cerró el socio:
  *
+ *   a) Cada ejercicio tiene un rango de repeticiones en el plan. Por ejemplo 6 a 10.
+ *
+ *   b) Al estrenar un peso, cada serie arranca con su propio objetivo:
+ *        serie 1 → el piso del rango (6)
+ *        serie 2 → el piso más uno (7)
+ *        última  → AL FALLO, sin número
+ *
+ *   c) Después de cada sesión, serie por serie: si el usuario llegó o pasó su objetivo,
+ *      el objetivo de esa serie sube UNA repetición para la próxima, con tope en el techo
+ *      del rango. Si no llegó, el objetivo queda igual. NUNCA baja.
+ *
+ *   d) Cuando en una sesión TODAS las series llegan al techo del rango, en la siguiente
+ *      sube el peso y los objetivos vuelven a piso, piso+1, fallo.
+ *
+ *   e) El peso NUNCA baja solo.
+ *
+ * Así se ve una progresión normal con rango 6-10 y tres series:
+ *
+ *      objetivos          lo que hizo
+ *      6  ·  7  · fallo   →  6 /  7 /  9
+ *      7  ·  8  · fallo   →  7 /  8 / 10
+ *      8  ·  9  · fallo   →  8 /  9 / 10
+ *      9  · 10  · fallo   →  9 / 10 / 10
+ *     10  · 10  · fallo   → 10 / 10 / 10   ← todas al techo
+ *      6  ·  7  · fallo     con el peso siguiente
+ *
+ * ------------------------------------------------------------------------------------
  * Dos cosas que hay que tener presentes al leer este archivo:
  *
- * · **La subida es en kilos absolutos, no en porcentaje.** Un porcentaje mentía: con 2,5%
- *   sobre 60 kg el salto da 1,5 kg, menos que el disco más chico, así que el redondeo se
- *   lo comía y el parámetro no hacía nada hasta los 100 kg. El socio habría creído que lo
- *   regulaba sin que pasara nada.
- *
- * · **Los botones Fácil / Justo / No llegué solo cambian el TAMAÑO del salto**, nunca si
- *   hay salto. Las repeticiones son objetivas; el esfuerzo percibido es subjetivo y los
- *   principiantes lo estiman mal. Ver el comentario largo en la rama de "subir".
+ * · **Los objetivos son estado, no se deducen del peso.** Cada serie guarda el objetivo
+ *   que tenía cuando se hizo, y el de la próxima sesión sale de ahí. Por eso
+ *   `IntentoEjercicio` trae `objetivos` además de `reps`: sin eso, no hay forma de saber
+ *   si el usuario hizo 7 repeticiones porque le pedían 7 o porque le pedían 9.
  *
  * · **En los ejercicios asistidos, progresar es BAJAR el número.** Los kilos que registra
  *   el usuario en dominadas asistidas son los kilos de AYUDA de la máquina. Menos ayuda es
@@ -91,20 +112,94 @@ export function equipoDeCarga(ejercicio, reglas) {
 }
 
 /**
- * Con cuánto arrancar la primera vez.
+ * Cuántos kilos se suman cuando toca subir.
  *
- * El valor vive en el ejercicio, porque es propiedad del ejercicio y no de la rutina: si
- * estuviera en cada rutina, el mismo ejercicio podría tener tres pesos iniciales distintos
- * sin que nadie se entere. La rutina lo puede pisar, pero tiene que decirlo explícitamente.
+ * Por defecto es el `subirKg` del equipo, pero el ejercicio lo puede pisar con su propia
+ * columna `subir_kg`. Existe porque el press militar progresa mucho más lento que la
+ * sentadilla aunque los dos usen barra: un solo número por equipo no alcanza. Mientras la
+ * columna esté vacía —hoy lo está en toda la planilla— manda el equipo.
+ *
+ * Si no hay ninguno de los dos, cae al escalón más chico del equipo, que es lo mínimo que
+ * se puede mover de verdad.
  * @param {Ejercicio} ejercicio
- * @param {EjercicioPlanificado} plan
- * @returns {number|null}
+ * @param {Equipo} equipo
+ * @returns {number}
  */
-export function pesoInicialDe(ejercicio, plan) {
-  if (Object.prototype.hasOwnProperty.call(plan, 'pesoInicialKg')) {
-    return plan.pesoInicialKg === undefined ? null : plan.pesoInicialKg;
+export function saltoDe(ejercicio, equipo) {
+  if (ejercicio.subirKg !== undefined && ejercicio.subirKg > 0) return ejercicio.subirKg;
+  if (equipo.subirKg > 0) return equipo.subirKg;
+  return equipo.incrementoMinimoKg || 0;
+}
+
+/**
+ * Los objetivos de cada serie al estrenar un peso: piso, piso+1, piso+2… y la última al
+ * fallo.
+ *
+ * `null` quiere decir "al fallo": esa serie no tiene número, se hacen todas las que
+ * salgan. Es un valor distinto de 0, que querría decir "cero repeticiones".
+ *
+ * El tope del rango también se respeta acá: con un rango corto (8 a 9) y cuatro series,
+ * los objetivos no pueden pasarse del techo.
+ * @param {EjercicioPlanificado} plan
+ * @returns {(number|null)[]}
+ */
+export function objetivosIniciales(plan) {
+  const cuantas = Math.max(1, plan.series);
+  /** @type {(number|null)[]} */
+  const objetivos = [];
+  for (let i = 0; i < cuantas; i++) {
+    // La última siempre al fallo, sea cual sea el número de series.
+    objetivos.push(i === cuantas - 1 ? null : Math.min(plan.repsMin + i, plan.repsMax));
   }
-  return ejercicio.pesoInicialKg === undefined ? null : ejercicio.pesoInicialKg;
+  return objetivos;
+}
+
+/**
+ * ¿Todas las series llegaron al techo del rango?
+ *
+ * Es la condición que dispara la subida de peso. Exige DOS cosas: que haya hecho todas las
+ * series que pedía el plan, y que en todas haya llegado al techo. Si hizo 2 de 3 series
+ * perfectas, no alcanza.
+ *
+ * La serie al fallo cuenta igual que las demás: llegar al techo es hacer `repsMax` o más,
+ * tenga objetivo escrito o no.
+ * @param {number[]} reps
+ * @param {EjercicioPlanificado} plan
+ * @returns {boolean}
+ */
+export function todasAlTecho(reps, plan) {
+  if (!Array.isArray(reps) || reps.length < plan.series) return false;
+  return reps.slice(0, plan.series).every((r) => r >= plan.repsMax);
+}
+
+/**
+ * Los objetivos de la próxima sesión, serie por serie.
+ *
+ * La regla, que es toda la gracia del sistema: **cada serie avanza sola**. Si llegaste a
+ * tu objetivo en la serie 1 pero no en la 2, la 1 sube y la 2 se queda esperándote. No hay
+ * castigo por no llegar, solo se deja de avanzar esa serie.
+ *
+ * Y nunca baja. Un mal día —dormiste mal, venías cansado— no te hace retroceder: los
+ * objetivos te esperan donde los dejaste.
+ *
+ * @param {(number|null)[]} objetivos  Los que tenía la sesión que se acaba de hacer.
+ * @param {number[]} reps              Lo que hizo en cada serie, en el mismo orden.
+ * @param {EjercicioPlanificado} plan
+ * @returns {(number|null)[]}
+ */
+export function avanzarObjetivos(objetivos, reps, plan) {
+  return objetivos.map((objetivo, i) => {
+    // La serie al fallo no tiene número, así que no hay nada que subir: sigue al fallo
+    // hasta que todas lleguen al techo y se reinicie con el peso nuevo.
+    if (objetivo === null) return null;
+
+    const hechas = reps[i];
+    // Serie que no se registró (abandonó la sesión, o borró la serie): no se toca.
+    if (typeof hechas !== 'number' || !Number.isFinite(hechas)) return objetivo;
+
+    if (hechas >= objetivo) return Math.min(objetivo + 1, plan.repsMax);
+    return objetivo;
+  });
 }
 
 /**
@@ -119,7 +214,7 @@ export function pesoInicialDe(ejercicio, plan) {
  * @returns {number}
  */
 export function redondearACargaPosible(pesoKg, equipo) {
-  // Incremento 0 es peso corporal: no hay nada que redondear.
+  // Incremento 0 es peso corporal o banda: no hay nada que redondear.
   if (!equipo.incrementoMinimoKg || equipo.incrementoMinimoKg <= 0) return redondear2(pesoKg);
 
   const pasos = Math.round((pesoKg - equipo.pesoBaseKg) / equipo.incrementoMinimoKg);
@@ -128,97 +223,26 @@ export function redondearACargaPosible(pesoKg, equipo) {
 }
 
 /**
- * ¿Completó el rango de repeticiones en todas las series?
- *
- * Exige DOS cosas: que haya hecho todas las series que pedía el plan, y que en todas
- * haya llegado al techo. Si hizo 2 de 3 series perfectas, no alcanza.
- *
- * @param {number[]} reps
- * @param {EjercicioPlanificado} plan
- * @returns {boolean}
+ * Los objetivos en castellano, para meter en una frase.
+ * Ejemplo: "6, 7 y la última al fallo".
+ * @param {(number|null)[]} objetivos
+ * @returns {string}
  */
-export function completoElRango(reps, plan) {
-  if (!Array.isArray(reps) || reps.length < plan.series) return false;
-  return reps.slice(0, plan.series).every((r) => r >= plan.repsMax);
+export function describirObjetivos(objetivos) {
+  const numeros = objetivos.filter((o) => o !== null).map(String);
+  const hayFallo = objetivos.some((o) => o === null);
+
+  if (numeros.length === 0) return 'al fallo';
+  const lista = numeros.length === 1 ? numeros[0] : numeros.slice(0, -1).join(', ') + ' y ' + numeros[numeros.length - 1];
+  return hayFallo ? lista + ', y la última al fallo' : lista;
 }
 
 /**
- * Cuántas sesiones seguidas viene fallando CON EL MISMO PESO, contando desde la más
- * reciente hacia atrás.
- *
- * Que sea "con el mismo peso" resuelve solo un caso complicado: si el usuario cambió la
- * carga por su cuenta, la cuenta se reinicia. No arrastramos los fracasos que tuvo con
- * otra carga, porque ya no está intentando esa.
- *
- * @param {IntentoEjercicio[]} historial  Del más reciente al más viejo.
- * @param {EjercicioPlanificado} plan
- * @returns {number}
- */
-export function fallosSeguidos(historial, plan) {
-  if (historial.length === 0) return 0;
-  const peso = historial[0].pesoKg;
-  let cuenta = 0;
-  for (const intento of historial) {
-    if (intento.pesoKg !== peso) break;
-    if (completoElRango(intento.reps, plan)) break;
-    cuenta++;
-  }
-  return cuenta;
-}
-
-/**
- * ¿Alguna vez retrocedió en este ejercicio?
- *
- * Retroceder es haber bajado la carga en algún momento: por un deload, o porque el usuario
- * lo decidió. En los asistidos es al revés, subir la ayuda es retroceder, y por eso mira
- * el signo.
- *
- * Sirve para una cosa sola: desactivar el salto doble. El salto doble existe para corregir
- * un arranque demasiado liviano, y un retroceso es la prueba de que la carga ya está
- * calibrada. Sin esta guarda pasa algo feo: alguien llega a 60 kg, falla dos veces, baja a
- * 55, y con saltos dobles vuelve a 60 y a 65 en dos sesiones, o sea que termina más arriba
- * del peso donde ya había fallado. El deload no habría servido para nada.
- *
- * @param {IntentoEjercicio[]} historial  Del más reciente al más viejo.
- * @param {number} sentido                1 normal, -1 en asistidos.
- * @returns {boolean}
- */
-export function huboRetroceso(historial, sentido) {
-  for (let i = 0; i < historial.length - 1; i++) {
-    const masNuevo = historial[i].pesoKg;
-    const masViejo = historial[i + 1].pesoKg;
-    if (sentido > 0 ? masNuevo < masViejo : masNuevo > masViejo) return true;
-  }
-  return false;
-}
-
-/**
- * ¿El salto doble es razonable, o es un salto demasiado grande de golpe?
- *
- * Con cargas chicas, duplicar el salto es una barbaridad aunque el usuario haya marcado
- * "Fácil": en mancuernas, pasar de 10 a 14 kg es un 40% más de golpe. El tope lo pone
- * `saltoMaximoPorcentaje` en reglas.json, y limita SOLO al salto doble. El salto normal
- * nunca se bloquea: si no, el usuario quedaría trabado.
- *
- * @param {number} pesoActual
- * @param {number} saltoKg
- * @param {Reglas} reglas
- * @returns {boolean}
- */
-export function cabeElSaltoDoble(pesoActual, saltoKg, reglas) {
-  const tope = reglas.progresion.saltoMaximoPorcentaje;
-  if (!tope || tope <= 0) return true;
-  // Con carga cero (lastre desde el peso corporal) el porcentaje no se puede calcular.
-  if (pesoActual <= 0) return true;
-  return (Math.abs(saltoKg) / pesoActual) * 100 <= tope;
-}
-
-/**
- * La función principal: qué peso y qué repeticiones sugerirle al usuario.
+ * La función principal: con qué peso y con qué objetivos encarar el próximo ejercicio.
  *
  * @param {IntentoEjercicio[]} historial  Del más reciente al más viejo. Vacío = primera vez.
  * @param {EjercicioPlanificado} plan     Lo que pide la rutina.
- * @param {Ejercicio} ejercicio           La ficha del ejercicio (equipo, modo, peso inicial).
+ * @param {Ejercicio} ejercicio           La ficha del ejercicio (equipo y casillas de carga).
  * @param {Reglas} reglas                 El contenido de datos/reglas.json.
  * @returns {Sugerencia}
  */
@@ -226,15 +250,12 @@ export function sugerirCarga(historial, plan, ejercicio, reglas) {
   /** @type {string|undefined} */
   let advertencia;
   const modo = modoDeCarga(ejercicio);
+  const iniciales = objetivosIniciales(plan);
 
   let equipo = equipoDeCarga(ejercicio, reglas);
   if (!equipo) {
     // No reventamos en el medio del gimnasio por un dato mal cargado: suponemos saltos de
     // 1 kg y lo dejamos dicho. tools/validar-datos.mjs tendría que haberlo agarrado antes.
-    //
-    // Con la planilla real esto pasa de verdad: hay ejercicios que el socio todavía no
-    // clasificó y vienen con la columna `equipo` vacía. No es motivo para romper la
-    // pantalla; es motivo para avisar y seguir.
     advertencia = ejercicio.equipo
       ? 'El equipo "' + ejercicio.equipo + '" no está en reglas.json. Se supusieron saltos de 1 kg.'
       : 'Este ejercicio todavía no tiene equipo cargado en la planilla. Se supusieron saltos de 1 kg.';
@@ -242,42 +263,60 @@ export function sugerirCarga(historial, plan, ejercicio, reglas) {
   }
 
   const incremento = equipo.incrementoMinimoKg || 0;
-  const subirKg = equipo.subirKg || incremento;
+  const salto = saltoDe(ejercicio, equipo);
 
   // En los asistidos el progreso va para abajo: menos ayuda es mejor. Este signo es lo
   // único que separa "te está yendo bien" de "ponete más ayuda".
   const sentido = modo === 'asistencia' ? -1 : 1;
 
-  // --- Primera vez: no hay nada que calcular.
+  /*
+   * --- Primera vez: la app no recomienda peso.
+   *
+   * Es decisión del socio, y es deliberada: nadie que no esté ahí puede saber con cuántos
+   * kilos arranca esta persona en este aparato. El usuario prueba, y anota lo que usó.
+   * Por eso `pesoKg` viene en null y la pantalla muestra el campo vacío.
+   */
   if (!historial || historial.length === 0) {
-    const inicial = pesoInicialDe(ejercicio, plan);
     return {
-      pesoKg: inicial,
-      repsObjetivo: plan.repsMin,
+      pesoKg: null,
+      objetivos: iniciales,
       motivo: 'primera-vez',
       modo,
-      explicacion: inicial === null
-        ? 'Primera vez con este ejercicio: elegí un peso con el que llegues cómodo a ' + plan.repsMin + ' repeticiones.'
-        : modo === 'asistencia'
-          ? 'Primera vez: arrancá con ' + inicial + ' kg de ayuda y apuntá a ' + plan.repsMin + ' repeticiones.'
-          : 'Primera vez con este ejercicio: arrancá con ' + inicial + ' kg y apuntá a ' + plan.repsMin + ' repeticiones.',
+      explicacion: 'Primera vez con este ejercicio: probá un peso que te deje llegar a ' +
+                   plan.repsMin + ' repeticiones y anotá el que hayas usado. ' +
+                   'Los objetivos son ' + describirObjetivos(iniciales) + '.',
       advertencia
     };
   }
 
   const ultimo = historial[0];
-  const anterior = historial[1];
 
-  // --- Completó el rango: le toca progresar.
-  if (completoElRango(ultimo.reps, plan)) {
-    // Peso corporal sin lastre: no hay kilos que mover, se progresa con repeticiones.
-    if (modo === 'peso-corporal' || incremento <= 0) {
+  /*
+   * Los objetivos de la sesión pasada. Si el intento no los trae —historial guardado antes
+   * de que existiera esta regla— arrancamos de los iniciales. Es una reconstrucción, no el
+   * dato real, pero es mejor que quedarse sin nada y siempre queda del lado conservador:
+   * el objetivo reconstruido nunca es más alto que el que la persona venía teniendo.
+   */
+  const objetivosPrevios = Array.isArray(ultimo.objetivos) && ultimo.objetivos.length
+    ? ultimo.objetivos
+    : iniciales;
+
+  // --- Todas las series al techo: le toca subir el peso y volver a empezar el ciclo.
+  if (todasAlTecho(ultimo.reps, plan)) {
+    /*
+     * Salvo que no haya kilos que mover. Pasa en dos casos reales de la planilla: peso
+     * corporal puro (flexiones) y banda elástica, que no se mide en kilos. Ahí el usuario
+     * ya está en el techo del rango y la app no tiene nada más para ofrecerle: se lo
+     * decimos en vez de mandarlo a repetir el ciclo para nada.
+     */
+    if (incremento <= 0 || salto <= 0) {
       return {
         pesoKg: ultimo.pesoKg,
-        repsObjetivo: plan.repsMax,
-        motivo: 'subir',
+        objetivos: objetivosPrevios.map((o) => (o === null ? null : plan.repsMax)),
+        motivo: 'tope',
         modo,
-        explicacion: 'Completaste el rango. Como es peso corporal, el próximo paso es sumar repeticiones.',
+        explicacion: 'Llegaste a ' + plan.repsMax + ' repeticiones en todas las series. ' +
+                     'Acá no hay kilos para sumar, así que sostené ese número.',
         advertencia
       };
     }
@@ -287,39 +326,16 @@ export function sugerirCarga(historial, plan, ejercicio, reglas) {
       const siguiente = (ejercicio.sustitutos || [])[0];
       return {
         pesoKg: 0,
-        repsObjetivo: plan.repsMax,
-        motivo: 'mantener',
+        objetivos: objetivosPrevios.map((o) => (o === null ? null : plan.repsMax)),
+        motivo: 'tope',
         modo,
         explicacion: 'Ya lo estás haciendo sin nada de ayuda. ' +
-                     (siguiente ? 'Pasá a la versión sin asistencia.' : 'Sumá repeticiones.'),
+                     (siguiente ? 'Pasá a la versión sin asistencia.' : 'Sostené ese número.'),
         advertencia
       };
     }
 
-    /*
-     * Acá entra el botón de esfuerzo, y SOLO acá.
-     *
-     * Las repeticiones deciden SI progresa; el botón decide CUÁNTO. Marcar "Fácil" no
-     * puede hacer que suba sin haber completado el rango, y marcar "No llegué" no puede
-     * frenarlo si lo completó. Es a propósito: un principiante estima muy mal cuánto le
-     * faltaba para fallar, así que el dato subjetivo no puede mandar sobre el objetivo.
-     *
-     * Lo que sí aporta el botón es algo que las repeticiones no ven: completar el rango
-     * y que además haya sido fácil significa que arrancó demasiado liviano. Ese es el
-     * problema real de las primeras semanas, y el salto doble lo corrige.
-     */
-    const multiplicadorPedido = ultimo.esfuerzo === 'facil'
-      ? (reglas.progresion.multiplicadorSiFueFacil || 1)
-      : 1;
-
-    // Dos guardas sobre el salto doble. Si cualquiera de las dos lo bloquea, sube normal:
-    // nunca se queda sin subir.
-    const yaRetrocedio = huboRetroceso(historial, sentido);
-    const entraPorTamano = cabeElSaltoDoble(ultimo.pesoKg, subirKg * multiplicadorPedido, reglas);
-    const multiplicador = (multiplicadorPedido > 1 && !yaRetrocedio && entraPorTamano) ? multiplicadorPedido : 1;
-    const saltoDoble = multiplicador > 1;
-
-    let nuevo = redondearACargaPosible(ultimo.pesoKg + sentido * subirKg * multiplicador, equipo);
+    let nuevo = redondearACargaPosible(ultimo.pesoKg + sentido * salto, equipo);
 
     // Caso borde importante: si el redondeo devuelve el mismo peso de siempre, el usuario
     // queda trabado para siempre sin que nada falle. Lo empujamos un escalón.
@@ -329,77 +345,34 @@ export function sugerirCarga(historial, plan, ejercicio, reglas) {
 
     return {
       pesoKg: nuevo,
-      repsObjetivo: plan.repsMin,
+      objetivos: iniciales,
       motivo: 'subir',
       modo,
       explicacion: (modo === 'asistencia'
-        ? 'Completaste ' + plan.repsMax + ' repeticiones con ' + ultimo.pesoKg + ' kg de ayuda. ' +
-          'Bajá la ayuda a ' + nuevo + ' kg y volvé a ' + plan.repsMin + '.'
-        : 'Completaste ' + plan.repsMax + ' repeticiones en las ' + plan.series + ' series con ' +
-          ultimo.pesoKg + ' kg. Subí a ' + nuevo + ' kg y volvé a ' + plan.repsMin + '.') +
-        (saltoDoble ? ' Como lo marcaste fácil, el salto es doble.' : ''),
+        ? 'Llegaste a ' + plan.repsMax + ' repeticiones en todas las series con ' + ultimo.pesoKg +
+          ' kg de ayuda. Bajá la ayuda a ' + nuevo + ' kg.'
+        : 'Llegaste a ' + plan.repsMax + ' repeticiones en todas las series con ' + ultimo.pesoKg +
+          ' kg. Subí a ' + nuevo + ' kg.') +
+        ' Los objetivos vuelven a ' + describirObjetivos(iniciales) + '.',
       advertencia
     };
   }
 
-  // --- Retrocedió por su cuenta desde la sesión anterior: lo respetamos.
-  // Ojo con el signo: en asistidos, retroceder es SUBIR los kilos de ayuda.
-  const retrocedio = anterior && (sentido > 0
-    ? ultimo.pesoKg < anterior.pesoKg
-    : ultimo.pesoKg > anterior.pesoKg);
+  // --- Caso normal: el mismo peso, y cada serie avanza por su cuenta.
+  const objetivos = avanzarObjetivos(objetivosPrevios, ultimo.reps, plan);
+  const avanzoAlguna = objetivos.some((o, i) => o !== null && o !== objetivosPrevios[i]);
 
-  if (retrocedio) {
-    return {
-      pesoKg: ultimo.pesoKg,
-      repsObjetivo: plan.repsMax,
-      motivo: 'bajaste-el-peso',
-      modo,
-      explicacion: modo === 'asistencia'
-        ? 'La última vez subiste la ayuda a ' + ultimo.pesoKg + ' kg. Quedate ahí hasta llegar a ' +
-          plan.repsMax + ' repeticiones en las ' + plan.series + ' series.'
-        : 'La última vez bajaste a ' + ultimo.pesoKg + ' kg. Quedate ahí hasta llegar a ' +
-          plan.repsMax + ' repeticiones en las ' + plan.series + ' series.',
-      advertencia
-    };
-  }
-
-  // --- Se estancó demasiadas veces seguidas: aflojamos la carga para volver a arrancar.
-  const fallos = fallosSeguidos(historial, plan);
-  if (fallos >= reglas.progresion.sesionesFallidasParaBajar && incremento > 0) {
-    // El deload sí es porcentual, y acá el porcentaje no miente: a cualquier carga
-    // razonable, un 10% da más que el disco más chico. Igual ponemos un piso de un
-    // escalón para que no se quede en cero cuando la carga es muy baja.
-    const magnitud = Math.max(Math.abs(ultimo.pesoKg) * reglas.progresion.bajarPorcentaje / 100, incremento);
-    let nuevo = redondearACargaPosible(ultimo.pesoKg - sentido * magnitud, equipo);
-
-    if (sentido > 0 && nuevo >= ultimo.pesoKg) nuevo = redondearACargaPosible(ultimo.pesoKg - incremento, equipo);
-    if (sentido < 0 && nuevo <= ultimo.pesoKg) nuevo = redondearACargaPosible(ultimo.pesoKg + incremento, equipo);
-    if (nuevo < equipo.pesoBaseKg) nuevo = equipo.pesoBaseKg;
-
-    return {
-      pesoKg: nuevo,
-      repsObjetivo: plan.repsMin,
-      motivo: 'bajar',
-      modo,
-      explicacion: modo === 'asistencia'
-        ? 'Van ' + fallos + ' sesiones con ' + ultimo.pesoKg + ' kg de ayuda sin completar el rango. ' +
-          'Subí la ayuda a ' + nuevo + ' kg y volvé a bajarla desde ahí.'
-        : 'Van ' + fallos + ' sesiones con ' + ultimo.pesoKg + ' kg sin completar el rango. ' +
-          'Bajá a ' + nuevo + ' kg y volvé a subir desde ahí.',
-      advertencia
-    };
-  }
-
-  // --- Caso normal: sigue igual hasta completar el rango.
   return {
     pesoKg: ultimo.pesoKg,
-    repsObjetivo: plan.repsMax,
-    motivo: 'mantener',
+    objetivos,
+    motivo: 'seguir',
     modo,
-    explicacion: modo === 'asistencia'
-      ? 'Seguí con ' + ultimo.pesoKg + ' kg de ayuda. Te falta llegar a ' + plan.repsMax + ' repeticiones.'
-      : 'Seguí con ' + ultimo.pesoKg + ' kg. Te falta llegar a ' + plan.repsMax +
-        ' repeticiones en las ' + plan.series + ' series.',
+    explicacion: (modo === 'asistencia'
+      ? 'Seguí con ' + ultimo.pesoKg + ' kg de ayuda. '
+      : 'Seguí con ' + ultimo.pesoKg + ' kg. ') +
+      (avanzoAlguna
+        ? 'Los objetivos de hoy son ' + describirObjetivos(objetivos) + '.'
+        : 'Los objetivos siguen en ' + describirObjetivos(objetivos) + '.'),
     advertencia
   };
 }

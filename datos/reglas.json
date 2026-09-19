@@ -1,14 +1,8 @@
 {
-  "version": 2,
+  "version": 3,
   "provisorio": true,
   "descansoPorDefectoSeg": 90,
   "descansoEntreEjerciciosSeg": 120,
-  "progresion": {
-    "bajarPorcentaje": 10,
-    "sesionesFallidasParaBajar": 2,
-    "multiplicadorSiFueFacil": 2,
-    "saltoMaximoPorcentaje": 20
-  },
   "equipos": {
     "barra": {
       "nombre": "Barra olímpica",
@@ -45,13 +39,26 @@
       "incrementoMinimoKg": 2.5,
       "pesoBaseKg": 0,
       "subirKg": 2.5,
-      "nota": "PENDIENTE DE CONFIRMAR CON EL SOCIO. Lo usan 17 ejercicios de la planilla y no estaba definido acá. pesoBaseKg quedó en 0 porque la barra del Multipower pesa distinto en cada gimnasio y muchas están contrapesadas: el usuario anota los discos que pone. Si el socio decide que se cuente la barra, se cambia este número y nada más."
+      "nota": "PENDIENTE DE CONFIRMAR CON EL SOCIO. pesoBaseKg quedó en 0 porque la barra del Multipower pesa distinto en cada gimnasio y muchas están contrapesadas: el usuario anota los discos que pone. Si el socio decide que se cuente la barra, se cambia este número y nada más."
     },
     "polea": {
       "nombre": "Polea",
       "incrementoMinimoKg": 2.5,
       "pesoBaseKg": 0,
       "subirKg": 2.5
+    },
+    "disco": {
+      "nombre": "Disco suelto",
+      "incrementoMinimoKg": 2.5,
+      "pesoBaseKg": 0,
+      "subirKg": 2.5
+    },
+    "banda": {
+      "nombre": "Banda elástica",
+      "incrementoMinimoKg": 0,
+      "pesoBaseKg": 0,
+      "subirKg": 0,
+      "nota": "La banda no se mide en kilos: se progresa con repeticiones, o cambiando de banda. Por eso los tres números van en cero, igual que en peso corporal."
     },
     "peso-corporal": {
       "nombre": "Peso corporal",
@@ -72,14 +79,5 @@
       "subirKg": 5
     }
   },
-  "conflictos": [
-    {
-      "clave": "progresion.bajarPorcentaje",
-      "estado": "SIN RESOLVER",
-      "postura_socio": "La app NO baja el peso nunca. El usuario se queda en la carga hasta que la saca.",
-      "postura_juan": "Bajar 10% después de dos sesiones seguidas sin completar el rango.",
-      "implementado": "postura_juan",
-      "nota": "Implementado como pidió Juan. El socio respondió lo contrario y todavía no se discutió. NO es un cambio hecho por atrás."
-    }
-  ]
+  "conflictos": []
 }

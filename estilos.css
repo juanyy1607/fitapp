@@ -301,6 +301,13 @@ button:disabled { opacity: 0.3; }
   font-weight: 500;
   color: var(--texto-2);
 }
+
+/* Contra qué objetivo se hizo esa serie. En gris más apagado: es contexto, no el dato
+   principal, que es lo que la persona levantó. En amarillo cuando lo alcanzó, porque el
+   amarillo en esta app significa una sola cosa: esto pasó. */
+.hecha-meta { color: var(--texto-4); font-weight: 400; }
+.hecha-meta.lograda { color: var(--senal); }
+
 .hecha-borrar {
   min-height: 48px;
   min-width: 48px;
@@ -351,6 +358,11 @@ button:disabled { opacity: 0.3; }
   min-height: 64px;
   min-width: 150px;
 }
+
+/* La primera vez con un ejercicio la app no recomienda peso: el campo arranca vacío, con
+   una raya en gris, y el usuario anota lo que haya usado de verdad en el gimnasio. */
+.peso-grande.vacio { color: var(--texto-4); }
+
 .reps-grande {
   font-family: "Chivo Mono", ui-monospace, Menlo, monospace;
   font-variant-numeric: tabular-nums;
@@ -409,22 +421,25 @@ button:disabled { opacity: 0.3; }
 
 .nota-lado { font-size: 13px; color: var(--texto-3); text-align: center; margin: 14px 0 0; }
 
-/* --- Los tres botones de esfuerzo --- */
+/* --- El objetivo de la serie que viene --- */
 
-.esfuerzo-opciones { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-.esfuerzo-opciones button {
-  min-height: 58px;
-  text-align: left;
-  padding: 12px 18px;
-  background: var(--card);
+/*
+ * El objetivo de repeticiones de la serie que viene.
+ *
+ * Es el dato nuevo de la regla que cerró el socio: cada serie tiene su propio número, no
+ * uno para todo el ejercicio. Va arriba de todo en la tarjeta porque es lo primero que
+ * el usuario necesita saber cuando levanta la vista del aparato.
+ */
+.objetivo-serie {
+  font-size: 15px;
+  color: var(--texto-2);
+  padding: 10px 0 2px;
 }
-.esfuerzo-opciones .detalle {
-  display: block;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--texto-3);
-  margin-top: 2px;
-}
+.objetivo-serie strong { color: var(--texto); font-weight: 700; }
+
+/* La serie al fallo no tiene número, y se marca distinto para que no se lea como un
+   descuido. Es una instrucción, no un dato que falta. */
+.objetivo-serie.al-fallo strong { color: var(--senal); }
 
 /* ================================================================ DESCANSO
    PROVISORIO: el diseño definitivo depende de si la alarma aguanta en el bolsillo en

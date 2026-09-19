@@ -45,15 +45,18 @@ const HOY = Date.parse('2026-09-15T18:00:00Z');
 
 /**
  * Arma una sesión de prueba.
- * @param {{id?: string, inicioTs: number, finTs?: number|null, series: Array<[string, number, number, number]>}} datos
- *   Cada serie es [ejercicioId, numero, pesoKg, reps].
+ * @param {{id?: string, inicioTs: number, finTs?: number|null,
+ *          series: Array<[string, number, number, number] | [string, number, number, number, number|null]>}} datos
+ *   Cada serie es [ejercicioId, numero, pesoKg, reps] y, opcional, el objetivo que tenía
+ *   esa serie. Sin el quinto elemento la serie queda sin objetivo, que es como quedó el
+ *   historial guardado antes de que esta regla existiera.
  * @returns {Sesion}
  */
 function sesion({ id = 's' + Math.random(), inicioTs, finTs = inicioTs + 45 * 60000, series }) {
   return {
     id, rutinaId: 'full-body-principiante', diaId: 'a', inicioTs, finTs,
-    series: series.map(([ejercicioId, numero, pesoKg, reps]) => ({
-      ejercicioId, numero, pesoKg, reps, completadaTs: inicioTs + numero * 120000
+    series: series.map(([ejercicioId, numero, pesoKg, reps, objetivo]) => ({
+      ejercicioId, numero, pesoKg, reps, objetivo, completadaTs: inicioTs + numero * 120000
     }))
   };
 }
@@ -197,40 +200,56 @@ describe('historial + progresión juntos', () => {
   /** @type {EjercicioPlanificado} */
   const plan = { ejercicioId: 'press-banca', series: 3, repsMin: 8, repsMax: 12, descansoSeg: 120 };
 
-  test('una sesión completa hace que la próxima suba el peso', () => {
-    const lista = [sesion({ inicioTs: HOY - DIA, series: [['press-banca', 1, 40, 12], ['press-banca', 2, 40, 12], ['press-banca', 3, 40, 12]] })];
+  test('una sesión con todas las series al techo hace que la próxima suba el peso', () => {
+    const lista = [sesion({ inicioTs: HOY - DIA, series: [
+      ['press-banca', 1, 40, 12, 12], ['press-banca', 2, 40, 12, 12], ['press-banca', 3, 40, 12, null]
+    ] })];
     const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, pressBanca, reglas);
     assert.equal(s.motivo, 'subir');
     assert.equal(s.pesoKg, 42.5);
+    assert.deepEqual(s.objetivos, [8, 9, null]);
   });
 
-  test('bajar en la última serie NO cuenta como completada', () => {
-    const lista = [sesion({ inicioTs: HOY - DIA, series: [['press-banca', 1, 40, 12], ['press-banca', 2, 40, 12], ['press-banca', 3, 35, 12]] })];
+  test('bajar el peso en la última serie NO cuenta como llegar al techo', () => {
+    // La última serie se hizo con 35, así que no entra en el intento de 40 y quedan dos.
+    const lista = [sesion({ inicioTs: HOY - DIA, series: [
+      ['press-banca', 1, 40, 12, 12], ['press-banca', 2, 40, 12, 12], ['press-banca', 3, 35, 12, null]
+    ] })];
     const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, pressBanca, reglas);
-    assert.equal(s.motivo, 'mantener');
+    assert.equal(s.motivo, 'seguir');
     assert.equal(s.pesoKg, 40);
   });
 
-  test('sin historial cae en primera vez, no en un error', () => {
-    const s = sugerirCarga(intentosDeEjercicio([], 'press-banca'), plan, pressBanca, reglas);
-    assert.equal(s.motivo, 'primera-vez');
-    assert.equal(s.pesoKg, 20);
+  test('los objetivos guardados viajan hasta la progresión, serie por serie', () => {
+    const lista = [sesion({ inicioTs: HOY - DIA, series: [
+      ['press-banca', 1, 40, 9, 9], ['press-banca', 2, 40, 9, 10], ['press-banca', 3, 40, 11, null]
+    ] })];
+    const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, pressBanca, reglas);
+    // Serie 1 llegó a su 9 y sube a 10. Serie 2 pedía 10 e hizo 9: se queda en 10.
+    assert.deepEqual(s.objetivos, [10, 10, null]);
+    assert.equal(s.pesoKg, 40);
   });
 
-  test('dos sesiones estancadas seguidas bajan el peso', () => {
+  test('sin historial cae en primera vez, y la app no recomienda peso', () => {
+    const s = sugerirCarga(intentosDeEjercicio([], 'press-banca'), plan, pressBanca, reglas);
+    assert.equal(s.motivo, 'primera-vez');
+    assert.equal(s.pesoKg, null);
+  });
+
+  test('por muchas sesiones estancadas que haya, el peso no baja', () => {
     const lista = [
-      sesion({ inicioTs: HOY - 7 * DIA, series: [['press-banca', 1, 40, 9], ['press-banca', 2, 40, 8], ['press-banca', 3, 40, 8]] }),
-      sesion({ inicioTs: HOY - 2 * DIA, series: [['press-banca', 1, 40, 10], ['press-banca', 2, 40, 9], ['press-banca', 3, 40, 8]] })
+      sesion({ inicioTs: HOY - 7 * DIA, series: [['press-banca', 1, 40, 9, 10], ['press-banca', 2, 40, 8, 11], ['press-banca', 3, 40, 8, null]] }),
+      sesion({ inicioTs: HOY - 2 * DIA, series: [['press-banca', 1, 40, 10, 10], ['press-banca', 2, 40, 9, 11], ['press-banca', 3, 40, 8, null]] })
     ];
     const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, pressBanca, reglas);
-    assert.equal(s.motivo, 'bajar');
-    assert.equal(s.pesoKg, 35);
+    assert.equal(s.motivo, 'seguir');
+    assert.equal(s.pesoKg, 40);
   });
 
   test('la sesión de hoy todavía abierta no cambia la sugerencia de hoy', () => {
     const lista = [
-      sesion({ inicioTs: HOY - 2 * DIA, series: [['press-banca', 1, 40, 12], ['press-banca', 2, 40, 12], ['press-banca', 3, 40, 12]] }),
-      sesion({ inicioTs: HOY, finTs: null, series: [['press-banca', 1, 42.5, 8]] })
+      sesion({ inicioTs: HOY - 2 * DIA, series: [['press-banca', 1, 40, 12, 12], ['press-banca', 2, 40, 12, 12], ['press-banca', 3, 40, 12, null]] }),
+      sesion({ inicioTs: HOY, finTs: null, series: [['press-banca', 1, 42.5, 8, 8]] })
     ];
     const s = sugerirCarga(intentosDeEjercicio(lista, 'press-banca'), plan, pressBanca, reglas);
     assert.equal(s.pesoKg, 42.5, 'tiene que seguir sugiriendo lo mismo mientras entrenás');

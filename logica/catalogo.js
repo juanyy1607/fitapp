@@ -169,7 +169,19 @@ export function normalizarEjercicio(fila) {
     nivel: /** @type {any} */ (texto(fila.nivel)),
     sustitutos: lista(fila.sustitutos),
     descansoSeg: numero(columna(fila, 'descanso_seg', 'descansoSeg')),
-    pesoInicialKg: numero(columna(fila, 'peso_inicial_kg', 'pesoInicialKg')),
+
+    /*
+     * `subir_kg` pisa el del equipo, para este ejercicio solo. El press militar progresa
+     * mucho más lento que la sentadilla aunque los dos usen barra, y un solo número por
+     * equipo no alcanza. Hoy está vacía en toda la planilla: el socio la va a completar
+     * con uso real.
+     *
+     * Ojo con lo que NO está acá: `peso_inicial_kg` ya no se lee. El socio fue explícito:
+     * la app no recomienda el peso de arranque, el usuario prueba en el gimnasio y anota
+     * el que usó. Si quedara una columna vieja en la planilla, se ignora.
+     */
+    subirKg: numero(columna(fila, 'subir_kg', 'subirKg')),
+
     tecnica: texto(fila.tecnica),
     erroresComunes: texto(columna(fila, 'errores_comunes', 'erroresComunes')),
     video: texto(fila.video),

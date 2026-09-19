@@ -95,20 +95,22 @@ export function intentosDeEjercicio(sesiones, ejercicioId) {
     if (series.length === 0) continue;
 
     const pesoKg = pesoPredominante(series);
+    const delPeso = series.filter((s) => s.pesoKg === pesoKg);
 
-    // El botón de esfuerzo se pregunta una sola vez por ejercicio, en la última serie.
-    // Buscamos de atrás para adelante la última que lo tenga, por si en alguna sesión
-    // vieja quedó sin responder.
-    let esfuerzo;
-    for (let i = series.length - 1; i >= 0; i--) {
-      if (series[i].esfuerzo) { esfuerzo = series[i].esfuerzo; break; }
-    }
-
+    /*
+     * Los objetivos viajan pegados a las repeticiones, en el mismo orden y con la misma
+     * longitud. Es lo que permite que la progresión compare serie contra serie: 7
+     * repeticiones es un objetivo cumplido si le pedían 7, y uno fallado si le pedían 9.
+     *
+     * `undefined` en una serie (historial viejo, de antes de que esto existiera) se
+     * convierte en `null`, que la progresión lee como "iba al fallo". Es el valor más
+     * conservador: una serie al fallo nunca hace subir un objetivo.
+     */
     intentos.push({
       fechaTs: sesion.inicioTs,
       pesoKg,
-      reps: series.filter((s) => s.pesoKg === pesoKg).map((s) => s.reps),
-      esfuerzo
+      reps: delPeso.map((s) => s.reps),
+      objetivos: delPeso.map((s) => (s.objetivo === undefined ? null : s.objetivo))
     });
   }
 

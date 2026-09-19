@@ -39,8 +39,11 @@
  * @property {boolean} [esPesoCorporal]   El cuerpo aporta la carga base.
  * @property {boolean} [admiteLastre]     Se le puede agregar peso (dominadas con disco).
  * @property {boolean} [admiteAsistencia] Se puede hacer con ayuda (máquina o banda).
- * @property {number|null} [pesoInicialKg] Con cuánto arrancar la primera vez. Vive acá
- *                                        porque es propiedad del ejercicio, no de la rutina.
+ * @property {number} [subirKg]           Cuántos kilos sumar cuando toca subir, SOLO para
+ *                                        este ejercicio. Pisa el `subirKg` del equipo.
+ *                                        Existe porque el press militar progresa mucho más
+ *                                        lento que la sentadilla aunque los dos usen barra.
+ *                                        Vacío = manda el equipo.
  * @property {string[]} [sustitutos]      Qué hacer si la máquina está ocupada.
  * @property {number} [descansoSeg]       Descanso entre series propio de este ejercicio.
  *                                        Si falta, manda el de la rutina o el de reglas.json.
@@ -77,13 +80,13 @@
  * @typedef {Object} EjercicioPlanificado
  * @property {string} ejercicioId   Apunta a `Ejercicio.id`.
  * @property {number} series
- * @property {number} repsMin       Piso del rango de repeticiones.
- * @property {number} repsMax       Techo. Al llegar acá en TODAS las series, sube el peso.
+ * @property {number} repsMin       Piso del rango. De acá salen los objetivos al estrenar
+ *                                  un peso: serie 1 el piso, serie 2 el piso+1, etc.
+ * @property {number} repsMax       Techo. Es el tope de los objetivos, y al llegar acá en
+ *                                  TODAS las series sube el peso.
  * @property {number} descansoSeg   Segundos de descanso ENTRE SERIES de este ejercicio.
  * @property {number} [descansoDespuesSeg]  Descanso al TERMINAR este ejercicio, antes del
  *                                  siguiente. Si falta, se usa el valor de reglas.json.
- * @property {number|null} [pesoInicialKg]  Opcional: pisa el peso inicial del ejercicio
- *                                  solo para esta rutina.
  */
 
 /**
@@ -120,25 +123,14 @@
  */
 
 /**
- * Cómo progresa la carga. Esto lo ajusta el socio sin tocar código.
- * @typedef {Object} ReglaProgresion
- * @property {number} bajarPorcentaje            Cuánto bajar al estancarse.
- * @property {number} sesionesFallidasParaBajar  Cuántas veces seguidas hay que fallar antes de bajar.
- * @property {number} [multiplicadorSiFueFacil]  Por cuánto multiplicar el salto cuando el
- *                                               usuario marcó "Fácil". 1 = el botón no
- *                                               cambia nada. 2 = salto doble.
- * @property {number} [saltoMaximoPorcentaje]    Tope del salto DOBLE, en % de la carga
- *                                               actual. Evita que en cargas chicas el
- *                                               salto doble sea un 40% de golpe. No limita
- *                                               nunca al salto normal.
- */
-
-/**
  * Un desacuerdo abierto sobre una regla, anotado a la vista en datos/reglas.json.
  *
  * Existe para que ninguna decisión de entrenamiento quede cambiada por atrás: si lo
  * implementado no coincide con lo que respondió el socio, queda escrito con las dos
  * posiciones y el validador lo grita en cada corrida.
+ *
+ * Hoy la lista está vacía: el socio cerró la regla de progresión y se implementó como la
+ * definió él. La estructura queda porque el mecanismo va a hacer falta de nuevo.
  * @typedef {Object} ConflictoDeRegla
  * @property {string} clave
  * @property {string} estado
@@ -150,12 +142,16 @@
 
 /**
  * El archivo de reglas completo.
+ *
+ * No hay sección `progresion`: la regla de progresión no tiene números que ajustar. Los
+ * objetivos salen del rango de repeticiones de cada ejercicio, y los kilos que se suben,
+ * del `subirKg` del equipo o del ejercicio. Todo lo que había acá —el deload porcentual,
+ * las sesiones fallidas, el multiplicador de "Fácil"— murió con la regla vieja.
  * @typedef {Object} Reglas
  * @property {number} version
  * @property {boolean} [provisorio]   true mientras el socio no confirmó estos números.
  * @property {number} descansoPorDefectoSeg      Entre series, si el plan no lo dice.
  * @property {number} descansoEntreEjerciciosSeg Al pasar de un ejercicio al siguiente.
- * @property {ReglaProgresion} progresion
  * @property {Record<string, Equipo>} equipos
  * @property {ConflictoDeRegla[]} [conflictos]  Desacuerdos abiertos, a la vista.
  */
@@ -195,20 +191,21 @@
 // Esto lo genera el usuario entrenando. Vive en IndexedDB, en el teléfono.
 
 /**
- * Cómo se sintió la serie. Reemplaza al RIR, que un principiante no sabe estimar.
- * @typedef {'facil'|'justo'|'no-llegue'} Esfuerzo
- */
-
-/**
  * Una serie registrada en el gimnasio.
  * @typedef {Object} SerieRegistrada
  * @property {string} ejercicioId
  * @property {number} numero        1, 2, 3… dentro de ese ejercicio en esa sesión.
  * @property {number} pesoKg        Según el modo de carga: kilos levantados, kilos de
  *                                  lastre, o kilos de ayuda.
- * @property {number} reps
- * @property {Esfuerzo} [esfuerzo]  Se registra desde el día uno, aunque todavía no decida
- *                                  nada: el dato subjetivo no se puede recuperar después.
+ * @property {number} reps          Lo que hizo de verdad.
+ * @property {number|null} [objetivo] Lo que le pedía la app en ESTA serie. `null` = al
+ *                                  fallo, que es distinto de 0 y distinto de no tener dato.
+ *
+ *                                  Se guarda porque sin esto la progresión no se puede
+ *                                  calcular: 7 repeticiones es un objetivo cumplido si le
+ *                                  pedían 7, y uno fallado si le pedían 9. El número solo
+ *                                  no lo dice. Es el dato que no se puede recuperar
+ *                                  después, igual que pasaba con el esfuerzo.
  * @property {number} completadaTs  Marca de tiempo real de cuándo se confirmó.
  */
 
@@ -228,22 +225,29 @@
 /**
  * Lo que hizo el usuario con UN ejercicio en UNA sesión pasada.
  *
- * Es la forma que come la lógica de progresión. Deliberadamente simple: un peso y las
- * repeticiones de cada serie. Así se puede testear sin inventar sesiones enteras.
+ * Es la forma que come la lógica de progresión. Deliberadamente simple: un peso, las
+ * repeticiones de cada serie y el objetivo que tenía cada una. Así se puede testear sin
+ * inventar sesiones enteras.
  * @typedef {Object} IntentoEjercicio
  * @property {number} fechaTs
  * @property {number} pesoKg
- * @property {number[]} reps   Las repeticiones de cada serie, en orden.
- * @property {Esfuerzo} [esfuerzo]  Cómo se sintió, según el botón de la última serie.
- *                                  Solo modifica el TAMAÑO del salto, nunca si hay salto.
+ * @property {number[]} reps           Las repeticiones de cada serie, en orden.
+ * @property {(number|null)[]} [objetivos]  Lo que pedía cada serie, en el mismo orden.
+ *                                    `null` en una serie = iba al fallo. Puede faltar
+ *                                    entero en historial viejo, de antes de esta regla.
  */
 
 /**
  * La sugerencia que le mostramos al usuario al empezar un ejercicio.
  * @typedef {Object} Sugerencia
- * @property {number|null} pesoKg      Con cuánto arrancar. null = no sabemos todavía.
- * @property {number} repsObjetivo     A cuántas repeticiones apuntar.
- * @property {'primera-vez'|'subir'|'mantener'|'bajar'|'bajaste-el-peso'} motivo
+ * @property {number|null} pesoKg      Con qué peso. `null` = la app no lo sabe y el campo
+ *                                     va vacío, que es lo que pasa la primera vez: el
+ *                                     usuario prueba en el gimnasio y anota lo que usó.
+ * @property {(number|null)[]} objetivos  Un objetivo por serie, en orden. `null` = esa
+ *                                     serie va al fallo.
+ * @property {'primera-vez'|'subir'|'seguir'|'tope'} motivo
+ *                                     `tope` = llegó al techo pero no hay kilos que sumar
+ *                                     (peso corporal, banda, o asistido ya sin ayuda).
  * @property {ModoCarga} modo          Cómo hay que leer `pesoKg` en la pantalla.
  * @property {string} explicacion      Frase lista para mostrar en pantalla, en castellano.
  * @property {string} [advertencia]    Si algo de los datos estaba mal y hubo que suponer.

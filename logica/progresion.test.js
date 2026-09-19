@@ -1,14 +1,17 @@
 // @ts-check
 /**
- * logica/progresion.test.js — Tests de la lógica de progresión.
+ * logica/progresion.test.js — Tests de la regla de progresión.
  *
  * Correr con:   node --test
  *
  * Sin dependencias: el corredor de tests viene adentro de Node.
  *
+ * Estos tests son la regla escrita como ejemplos. Si alguien cambia la lógica y un test
+ * de acá se pone rojo, no es que el test esté desactualizado: es que se cambió el criterio
+ * de entrenamiento que cerró el socio. Eso se discute con él, no se arregla en el código.
+ *
  * Los tests usan el datos/reglas.json REAL, no una copia inventada: si el socio carga un
- * número que rompe la progresión, los tests se quejan antes de que llegue al teléfono de
- * nadie.
+ * número que rompe la progresión, se quejan antes de que llegue al teléfono de nadie.
  *
  * Los EJERCICIOS, en cambio, salen de un catálogo propio de los tests. Ver el comentario
  * largo donde se carga.
@@ -20,15 +23,15 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  sugerirCarga, redondearACargaPosible, completoElRango, fallosSeguidos,
-  redondear2, modoDeCarga, pesoInicialDe, huboRetroceso, cabeElSaltoDoble,
-  equipoDeCarga
+  sugerirCarga, redondearACargaPosible, todasAlTecho, objetivosIniciales,
+  avanzarObjetivos, redondear2, modoDeCarga, equipoDeCarga, saltoDe, describirObjetivos
 } from './progresion.js';
 import { normalizarEjercicio } from './catalogo.js';
 
 /** @typedef {import('../tipos.js').Reglas} Reglas */
 /** @typedef {import('../tipos.js').Ejercicio} Ejercicio */
 /** @typedef {import('../tipos.js').EjercicioPlanificado} EjercicioPlanificado */
+/** @typedef {import('../tipos.js').IntentoEjercicio} IntentoEjercicio */
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 /** @type {Reglas} */
@@ -37,11 +40,10 @@ const reglas = JSON.parse(readFileSync(join(RAIZ, 'datos/reglas.json'), 'utf8'))
 /*
  * Los tests usan su propio catálogo, no el del socio.
  *
- * Antes usaban datos/ejercicios.json, que en ese momento eran datos de prueba. Ahora ese
- * archivo tiene los 184 ejercicios reales y lo maneja el socio: si los tests dependieran
- * de él, renombrar un ejercicio en la planilla rompería la suite de progresión, que no
- * tiene nada que ver. Peor todavía, alguien podría "arreglar" el test cambiando los datos
- * del socio.
+ * datos/ejercicios.json tiene los 184 ejercicios reales y lo maneja el socio: si los tests
+ * dependieran de él, renombrar un ejercicio en la planilla rompería la suite de progresión,
+ * que no tiene nada que ver. Peor todavía, alguien podría "arreglar" el test cambiando los
+ * datos del socio.
  *
  * El fixture está escrito en el MISMO formato que la planilla (columnas con guión bajo,
  * casillas "si"/"no") y pasa por el mismo `normalizarEjercicio` que usa la app, así que
@@ -61,315 +63,490 @@ const catalogoReal = JSON.parse(readFileSync(join(RAIZ, 'datos/ejercicios.json')
 /** @param {string} id @returns {Ejercicio} */
 const ej = (id) => {
   const e = catalogo.find((x) => x.id === id);
-  if (!e) throw new Error('falta el ejercicio de prueba "' + id + '" en datos/ejercicios.json');
+  if (!e) throw new Error('falta el ejercicio de prueba "' + id + '" en logica/ejercicios-de-prueba.json');
   return e;
 };
 
-/** Un ejercicio de barra: 3 series de 8 a 12. @type {EjercicioPlanificado} */
-const PLAN_BARRA = { ejercicioId: 'press-banca', series: 3, repsMin: 8, repsMax: 12, descansoSeg: 120 };
+/** Barra, rango 6 a 10, tres series. Es el ejemplo con el que el socio explicó la regla. */
+/** @type {EjercicioPlanificado} */
+const PLAN = { ejercicioId: 'press-banca', series: 3, repsMin: 6, repsMax: 10, descansoSeg: 120 };
+
 /** @type {EjercicioPlanificado} */
 const PLAN_CORPORAL = { ejercicioId: 'plancha', series: 3, repsMin: 20, repsMax: 45, descansoSeg: 60 };
 /** @type {EjercicioPlanificado} */
 const PLAN_ASISTIDO = { ejercicioId: 'dominadas-asistidas', series: 3, repsMin: 6, repsMax: 10, descansoSeg: 120 };
-/** @type {EjercicioPlanificado} */
-const PLAN_LASTRE = { ejercicioId: 'dominadas', series: 3, repsMin: 6, repsMax: 10, descansoSeg: 120 };
 
-const intento = (/** @type {number} */ pesoKg, /** @type {number[]} */ reps, /** @type {any} */ esfuerzo) =>
-  ({ fechaTs: Date.now(), pesoKg, reps, esfuerzo });
+const AYER = Date.parse('2026-09-17T18:00:00Z');
+
+/**
+ * Un intento pasado, escrito corto.
+ * @param {number} pesoKg
+ * @param {number[]} reps
+ * @param {(number|null)[]} objetivos
+ * @returns {IntentoEjercicio}
+ */
+const intento = (pesoKg, reps, objetivos) => ({ fechaTs: AYER, pesoKg, reps, objetivos });
 
 // =====================================================================
+// Las piezas sueltas de la regla.
+// =====================================================================
 
-describe('redondear2', () => {
-  test('arregla la suma de decimales de la computadora', () => {
-    assert.equal(redondear2(40 * 1.025), 41);
-    assert.equal(redondear2(0.1 + 0.2), 0.3);
+describe('objetivosIniciales — con qué objetivos se estrena un peso', () => {
+  test('rango 6-10 y tres series: 6, 7 y la última al fallo', () => {
+    assert.deepEqual(objetivosIniciales(PLAN), [6, 7, null]);
+  });
+
+  test('la última serie siempre va al fallo, sea cual sea el número de series', () => {
+    assert.deepEqual(objetivosIniciales({ ...PLAN, series: 4 }), [6, 7, 8, null]);
+    assert.deepEqual(objetivosIniciales({ ...PLAN, series: 2 }), [6, null]);
+  });
+
+  test('con una sola serie, esa serie va al fallo', () => {
+    assert.deepEqual(objetivosIniciales({ ...PLAN, series: 1 }), [null]);
+  });
+
+  test('los objetivos iniciales nunca se pasan del techo del rango', () => {
+    // Rango cortito de 8 a 9 con cuatro series: sin el tope, la tercera pediría 10.
+    const objetivos = objetivosIniciales({ ...PLAN, series: 4, repsMin: 8, repsMax: 9 });
+    assert.deepEqual(objetivos, [8, 9, 9, null]);
   });
 });
 
-describe('redondearACargaPosible', () => {
-  const barra = reglas.equipos['barra'];
-  const maquina = reglas.equipos['maquina'];
-  const corporal = reglas.equipos['peso-corporal'];
-
-  test('con barra olímpica solo existen 20, 22.5, 25…', () => {
-    assert.equal(redondearACargaPosible(41, barra), 40);
-    assert.equal(redondearACargaPosible(41.5, barra), 42.5);
-    assert.equal(redondearACargaPosible(22.5, barra), 22.5);
+describe('avanzarObjetivos — cada serie avanza por su cuenta', () => {
+  test('la serie que llega a su objetivo sube uno', () => {
+    assert.deepEqual(avanzarObjetivos([6, 7, null], [6, 7, 9], PLAN), [7, 8, null]);
   });
 
-  test('nunca devuelve menos que la barra vacía', () => {
-    assert.equal(redondearACargaPosible(5, barra), 20);
-    assert.equal(redondearACargaPosible(-100, barra), 20);
+  test('la serie que se pasa de su objetivo igual sube UNO SOLO', () => {
+    // Hizo 9 donde le pedían 6. El objetivo va a 7, no a 9: la regla es de a una.
+    assert.deepEqual(avanzarObjetivos([6, 7, null], [9, 9, 12], PLAN), [7, 8, null]);
   });
 
-  test('la barra liviana permite arrancar más abajo', () => {
-    const liviana = reglas.equipos['barra-liviana'];
-    assert.equal(redondearACargaPosible(5, liviana), 10, 'el piso de la barra liviana es 10 kg');
-    assert.equal(redondearACargaPosible(12.5, liviana), 12.5);
+  test('la serie que no llega mantiene su objetivo', () => {
+    assert.deepEqual(avanzarObjetivos([8, 9, null], [7, 8, 9], PLAN), [8, 9, null]);
   });
 
-  test('una máquina sube de a 5', () => {
-    assert.equal(redondearACargaPosible(102.5, maquina), 105);
-    assert.equal(redondearACargaPosible(101, maquina), 100);
+  test('nunca baja, por mal que le haya ido', () => {
+    assert.deepEqual(avanzarObjetivos([9, 10, null], [1, 1, 1], PLAN), [9, 10, null]);
   });
 
-  test('peso corporal no divide por cero', () => {
-    assert.equal(redondearACargaPosible(0, corporal), 0);
-    assert.equal(redondearACargaPosible(12.345, corporal), 12.35);
+  test('el objetivo se frena en el techo del rango', () => {
+    assert.deepEqual(avanzarObjetivos([10, 10, null], [10, 10, 10], PLAN), [10, 10, null]);
+  });
+
+  test('la serie al fallo sigue al fallo: no tiene número que subir', () => {
+    assert.deepEqual(avanzarObjetivos([6, 7, null], [10, 10, 20], PLAN)[2], null);
+  });
+
+  test('una serie que no se registró no se toca', () => {
+    // Abandonó la sesión después de la segunda serie.
+    assert.deepEqual(avanzarObjetivos([6, 7, null], [6, 7], PLAN), [7, 8, null]);
   });
 });
 
-describe('modoDeCarga', () => {
-  test('un ejercicio común es peso normal', () => {
-    assert.equal(modoDeCarga(ej('press-banca')), 'peso');
-  });
-  test('la plancha es peso corporal', () => {
-    assert.equal(modoDeCarga(ej('plancha')), 'peso-corporal');
-  });
-  test('las dominadas con lastre son lastre', () => {
-    assert.equal(modoDeCarga(ej('dominadas')), 'lastre');
-  });
-  test('las dominadas asistidas son asistencia', () => {
-    assert.equal(modoDeCarga(ej('dominadas-asistidas')), 'asistencia');
-  });
-});
-
-describe('pesoInicialDe', () => {
-  test('sale del ejercicio, que es donde vive', () => {
-    assert.equal(pesoInicialDe(ej('press-banca'), PLAN_BARRA), 20);
+describe('todasAlTecho — la condición para subir el peso', () => {
+  test('las tres en el techo, sí', () => {
+    assert.equal(todasAlTecho([10, 10, 10], PLAN), true);
   });
 
-  test('la rutina lo puede pisar si lo dice explícitamente', () => {
-    const plan = { ...PLAN_BARRA, pesoInicialKg: 30 };
-    assert.equal(pesoInicialDe(ej('press-banca'), plan), 30);
-  });
-
-  test('la rutina puede pisarlo con null para que lo elija el usuario', () => {
-    const plan = { ...PLAN_BARRA, pesoInicialKg: null };
-    assert.equal(pesoInicialDe(ej('press-banca'), plan), null);
-  });
-});
-
-describe('completoElRango', () => {
-  test('hay que llegar al techo en TODAS las series', () => {
-    assert.equal(completoElRango([12, 12, 12], PLAN_BARRA), true);
-    assert.equal(completoElRango([12, 12, 11], PLAN_BARRA), false);
-  });
-  test('dos series perfectas de tres no alcanzan', () => {
-    assert.equal(completoElRango([12, 12], PLAN_BARRA), false);
-  });
   test('pasarse del techo también cuenta', () => {
-    assert.equal(completoElRango([14, 13, 12], PLAN_BARRA), true);
+    assert.equal(todasAlTecho([10, 11, 15], PLAN), true);
   });
-  test('no se rompe con datos vacíos o basura', () => {
-    assert.equal(completoElRango([], PLAN_BARRA), false);
-    // @ts-expect-error — probamos a propósito con un dato del tipo equivocado
-    assert.equal(completoElRango(null, PLAN_BARRA), false);
+
+  test('una sola por debajo alcanza para que no', () => {
+    assert.equal(todasAlTecho([10, 9, 10], PLAN), false);
+  });
+
+  test('dos series perfectas de tres no alcanzan', () => {
+    assert.equal(todasAlTecho([10, 10], PLAN), false);
   });
 });
 
-describe('fallosSeguidos', () => {
-  test('cuenta los fracasos al mismo peso', () => {
-    assert.equal(fallosSeguidos([intento(40, [10, 9, 8]), intento(40, [9, 9, 8])], PLAN_BARRA), 2);
+// =====================================================================
+// Los cuatro casos que pidió el socio. Son la regla contada como historias.
+// =====================================================================
+
+describe('CASO 1 — progresión normal, sesión por sesión', () => {
+  /*
+   * La secuencia que definió el socio, con rango 6-10 y tres series:
+   *
+   *    objetivos        lo que hizo
+   *    6 ·  7 · fallo →  6 /  7 /  9
+   *    7 ·  8 · fallo →  7 /  8 / 10
+   *    8 ·  9 · fallo →  8 /  9 / 10
+   *    9 · 10 · fallo →  9 / 10 / 10
+   *   10 · 10 · fallo → 10 / 10 / 10   ← todas al techo, sube el peso
+   */
+  const pasos = [
+    { objetivos: [6, 7, null], hizo: [6, 7, 9], siguientes: [7, 8, null] },
+    { objetivos: [7, 8, null], hizo: [7, 8, 10], siguientes: [8, 9, null] },
+    { objetivos: [8, 9, null], hizo: [8, 9, 10], siguientes: [9, 10, null] },
+    { objetivos: [9, 10, null], hizo: [9, 10, 10], siguientes: [10, 10, null] }
+  ];
+
+  for (const paso of pasos) {
+    test(`con objetivos ${JSON.stringify(paso.objetivos)} y ${paso.hizo.join('/')} → ${JSON.stringify(paso.siguientes)}`, () => {
+      const s = sugerirCarga([intento(40, paso.hizo, paso.objetivos)], PLAN, ej('press-banca'), reglas);
+      assert.deepEqual(s.objetivos, paso.siguientes);
+      assert.equal(s.pesoKg, 40, 'el peso no tiene que moverse todavía');
+      assert.equal(s.motivo, 'seguir');
+    });
+  }
+
+  test('con 10/10/10 sube el peso y los objetivos vuelven al principio', () => {
+    const s = sugerirCarga([intento(40, [10, 10, 10], [10, 10, null])], PLAN, ej('press-banca'), reglas);
+    assert.equal(s.motivo, 'subir');
+    assert.equal(s.pesoKg, 42.5, 'la barra sube de a 2,5 kg');
+    assert.deepEqual(s.objetivos, [6, 7, null]);
   });
-  test('se corta al llegar a una sesión completada', () => {
-    assert.equal(fallosSeguidos([intento(40, [10, 9, 8]), intento(40, [12, 12, 12])], PLAN_BARRA), 1);
-  });
-  test('NO arrastra los fracasos de otra carga', () => {
-    const historial = [intento(35, [10, 9, 8]), intento(40, [9, 8, 8]), intento(40, [9, 8, 7])];
-    assert.equal(fallosSeguidos(historial, PLAN_BARRA), 1);
-  });
-  test('sin historial es cero', () => {
-    assert.equal(fallosSeguidos([], PLAN_BARRA), 0);
+
+  test('la secuencia entera, encadenada de verdad', () => {
+    // Igual que arriba pero sin escribir los objetivos a mano en cada paso: se van
+    // arrastrando. Si alguna sesión del medio se desincroniza, esto lo agarra.
+    let objetivos = objetivosIniciales(PLAN);
+    let peso = 40;
+    const hizo = [[6, 7, 9], [7, 8, 10], [8, 9, 10], [9, 10, 10], [10, 10, 10]];
+    const esperados = [[7, 8, null], [8, 9, null], [9, 10, null], [10, 10, null], [6, 7, null]];
+
+    hizo.forEach((reps, i) => {
+      const s = sugerirCarga([intento(peso, reps, objetivos)], PLAN, ej('press-banca'), reglas);
+      assert.deepEqual(s.objetivos, esperados[i], 'sesión ' + (i + 1));
+      objetivos = s.objetivos;
+      peso = /** @type {number} */ (s.pesoKg);
+    });
+
+    assert.equal(peso, 42.5, 'después de las cinco sesiones tiene que haber subido una vez');
   });
 });
 
-describe('sugerirCarga — primera vez', () => {
-  test('sin historial usa el peso inicial del ejercicio', () => {
-    const s = sugerirCarga([], PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.motivo, 'primera-vez');
-    assert.equal(s.pesoKg, 20);
-    assert.equal(s.repsObjetivo, 8);
-    assert.equal(s.modo, 'peso');
+describe('CASO 2 — estancado en una serie', () => {
+  test('la serie 1 sigue avanzando y la 2 mantiene su objetivo', () => {
+    // Le pedían 7 y 8. Hizo 7 (llegó) y 7 (no llegó).
+    const s = sugerirCarga([intento(40, [7, 7, 9], [7, 8, null])], PLAN, ej('press-banca'), reglas);
+    assert.deepEqual(s.objetivos, [8, 8, null]);
+    assert.equal(s.pesoKg, 40);
   });
 
-  test('sin peso inicial devuelve null, no se rompe', () => {
-    const s = sugerirCarga([], PLAN_CORPORAL, ej('plancha'), reglas);
-    assert.equal(s.pesoKg, null);
-    assert.match(s.explicacion, /elegí un peso/);
+  test('puede quedarse estancada muchas sesiones sin que el peso se mueva', () => {
+    let objetivos = /** @type {(number|null)[]} */ ([7, 8, null]);
+    for (let i = 0; i < 5; i++) {
+      const s = sugerirCarga([intento(40, [10, 7, 9], objetivos)], PLAN, ej('press-banca'), reglas);
+      assert.equal(s.pesoKg, 40, 'el peso no sube mientras una serie no llegue al techo');
+      objetivos = s.objetivos;
+    }
+    // La serie 1 llegó al techo del rango; la 2 sigue clavada donde se estancó.
+    assert.deepEqual(objetivos, [10, 8, null]);
   });
 
-  test('en un asistido habla de kilos de ayuda, no de peso', () => {
-    const s = sugerirCarga([], PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
-    assert.equal(s.pesoKg, 30);
-    assert.match(s.explicacion, /ayuda/);
+  test('el peso NUNCA baja, por más sesiones que falle', () => {
+    let objetivos = /** @type {(number|null)[]} */ ([9, 10, null]);
+    for (let i = 0; i < 6; i++) {
+      const s = sugerirCarga([intento(40, [4, 4, 4], objetivos)], PLAN, ej('press-banca'), reglas);
+      assert.equal(s.pesoKg, 40, 'sesión ' + (i + 1) + ': el peso se quedó donde estaba');
+      assert.notEqual(s.motivo, 'bajar', 'el deload automático ya no existe');
+      objetivos = s.objetivos;
+    }
+    assert.deepEqual(objetivos, [9, 10, null], 'los objetivos tampoco bajaron');
   });
 });
 
-describe('sugerirCarga — subir', () => {
-  test('el caso borde clave: el salto tiene que caer en una carga que exista', () => {
-    const s = sugerirCarga([intento(40, [12, 12, 12])], PLAN_BARRA, ej('press-banca'), reglas);
+describe('CASO 3 — arranque liviano', () => {
+  test('hace 10/10/12 la primera sesión y el peso sube de una', () => {
+    // Le pedían 6, 7 y fallo. Se pasó en las tres: el peso estaba demasiado liviano.
+    const s = sugerirCarga([intento(40, [10, 10, 12], [6, 7, null])], PLAN, ej('press-banca'), reglas);
     assert.equal(s.motivo, 'subir');
     assert.equal(s.pesoKg, 42.5);
-    assert.equal(s.repsObjetivo, 8, 'al subir el peso se vuelve al piso de repeticiones');
+    assert.deepEqual(s.objetivos, [6, 7, null], 'el ciclo vuelve a empezar con el peso nuevo');
   });
 
-  test('en máquina sube de a 5', () => {
-    const plan = { ...PLAN_BARRA, ejercicioId: 'prensa' };
-    const s = sugerirCarga([intento(100, [12, 12, 12])], plan, ej('prensa'), reglas);
-    assert.equal(s.pesoKg, 105);
-  });
-
-  test('nunca sugiere el mismo peso al subir, en ningún tramo', () => {
-    for (let peso = 20; peso <= 200; peso += 2.5) {
-      const s = sugerirCarga([intento(peso, [12, 12, 12])], PLAN_BARRA, ej('press-banca'), reglas);
-      assert.ok(s.pesoKg !== null && s.pesoKg > peso,
-        'con ' + peso + ' kg sugirió ' + s.pesoKg + ', que no es una subida');
-    }
-  });
-
-  test('en peso corporal sube repeticiones, no kilos', () => {
-    const s = sugerirCarga([intento(0, [45, 45, 45])], PLAN_CORPORAL, ej('plancha'), reglas);
+  test('si sigue liviano, sube otra vez a la sesión siguiente', () => {
+    const s = sugerirCarga([intento(42.5, [11, 11, 14], [6, 7, null])], PLAN, ej('press-banca'), reglas);
     assert.equal(s.motivo, 'subir');
-    assert.equal(s.pesoKg, 0);
-    assert.match(s.explicacion, /repeticiones/);
+    assert.equal(s.pesoKg, 45);
   });
 
-  test('con lastre suma kilos desde cero', () => {
-    const s = sugerirCarga([intento(0, [10, 10, 10])], PLAN_LASTRE, ej('dominadas'), reglas);
-    assert.equal(s.modo, 'lastre');
+  test('sube una sola vez por sesión, no de a varios escalones', () => {
+    // Aunque haya hecho el doble del techo, el salto es el del equipo y nada más.
+    const s = sugerirCarga([intento(40, [20, 20, 20], [6, 7, null])], PLAN, ej('press-banca'), reglas);
+    assert.equal(s.pesoKg, 42.5);
+  });
+});
+
+describe('CASO 4 — bajón puntual', () => {
+  test('mantiene los objetivos y no castiga', () => {
+    // Venía con objetivos 8 y 9, durmió mal y no llegó a ninguno.
+    const s = sugerirCarga([intento(40, [6, 6, 7], [8, 9, null])], PLAN, ej('press-banca'), reglas);
+    assert.deepEqual(s.objetivos, [8, 9, null], 'los objetivos lo esperan donde los dejó');
+    assert.equal(s.pesoKg, 40, 'el peso tampoco baja');
+    assert.equal(s.motivo, 'seguir');
+  });
+
+  test('después del bajón retoma exactamente donde había quedado', () => {
+    const bajon = sugerirCarga([intento(40, [6, 6, 7], [8, 9, null])], PLAN, ej('press-banca'), reglas);
+    const vuelta = sugerirCarga([intento(40, [8, 9, 10], bajon.objetivos)], PLAN, ej('press-banca'), reglas);
+    assert.deepEqual(vuelta.objetivos, [9, 10, null]);
+  });
+
+  test('un bajón en la última sesión no borra lo que ya había ganado', () => {
+    // La serie 1 ya estaba en 10. Un mal día no la devuelve a 6.
+    const s = sugerirCarga([intento(40, [2, 2, 2], [10, 9, null])], PLAN, ej('press-banca'), reglas);
+    assert.equal(s.objetivos[0], 10);
+  });
+});
+
+// =====================================================================
+// La primera vez, que ahora no recomienda peso.
+// =====================================================================
+
+describe('la primera vez con un ejercicio', () => {
+  test('la app NO recomienda peso: el campo va vacío', () => {
+    const s = sugerirCarga([], PLAN, ej('press-banca'), reglas);
+    assert.equal(s.pesoKg, null, 'el usuario prueba en el gimnasio y anota lo que usó');
+    assert.equal(s.motivo, 'primera-vez');
+  });
+
+  test('pero sí da los objetivos de arranque', () => {
+    const s = sugerirCarga([], PLAN, ej('press-banca'), reglas);
+    assert.deepEqual(s.objetivos, [6, 7, null]);
+  });
+
+  test('tampoco recomienda peso en un ejercicio que antes tenía peso inicial cargado', () => {
+    // La sentadilla tenía pesoInicialKg 20 en los datos viejos. Ya no existe ese campo.
+    const s = sugerirCarga([], { ...PLAN, ejercicioId: 'sentadilla' }, ej('sentadilla'), reglas);
+    assert.equal(s.pesoKg, null);
+  });
+
+  test('la explicación le dice qué hacer, sin inventarle un número', () => {
+    const s = sugerirCarga([], PLAN, ej('press-banca'), reglas);
+    assert.match(s.explicacion, /probá un peso/i);
+    assert.doesNotMatch(s.explicacion, /\d+ kg/, 'no puede aparecer un peso recomendado');
+  });
+});
+
+// =====================================================================
+// Los modos de carga raros: asistido, peso corporal, lastre.
+// =====================================================================
+
+describe('los ejercicios asistidos: progresar es BAJAR la ayuda', () => {
+  test('al llegar al techo en todas, baja los kilos de ayuda', () => {
+    const s = sugerirCarga([intento(30, [10, 10, 10], [10, 10, null])], PLAN_ASISTIDO,
+                           ej('dominadas-asistidas'), reglas);
+    assert.equal(s.motivo, 'subir');
+    assert.equal(s.pesoKg, 25, 'la máquina de asistidas salta de a 5 kg, y para abajo');
+    assert.deepEqual(s.objetivos, [6, 7, null]);
+  });
+
+  test('la ayuda nunca sube sola', () => {
+    const s = sugerirCarga([intento(30, [2, 2, 2], [8, 9, null])], PLAN_ASISTIDO,
+                           ej('dominadas-asistidas'), reglas);
+    assert.equal(s.pesoKg, 30, 'por mal que le vaya, la app no le pone más ayuda');
+  });
+
+  test('sin nada de ayuda ya no hay a dónde bajar, y se lo decimos', () => {
+    const s = sugerirCarga([intento(0, [10, 10, 10], [10, 10, null])], PLAN_ASISTIDO,
+                           ej('dominadas-asistidas'), reglas);
+    assert.equal(s.motivo, 'tope');
+    assert.equal(s.pesoKg, 0);
+    assert.match(s.explicacion, /sin nada de ayuda/i);
+  });
+
+  test('el modo se deduce de la casilla, no de la columna equipo', () => {
+    assert.equal(modoDeCarga(ej('dominadas-asistidas')), 'asistencia');
+    const eq = equipoDeCarga(ej('dominadas-asistidas'), reglas);
+    assert.ok(eq && eq.incrementoMinimoKg > 0, 'tiene que salir del equipo de asistencia');
+  });
+});
+
+describe('peso corporal: no hay kilos que sumar', () => {
+  test('al llegar al techo, sostiene el número en vez de reiniciar el ciclo', () => {
+    const s = sugerirCarga([intento(0, [45, 45, 45], [45, 45, null])], PLAN_CORPORAL,
+                           ej('plancha'), reglas);
+    assert.equal(s.motivo, 'tope');
+    assert.equal(s.pesoKg, 0);
+    assert.match(s.explicacion, /no hay kilos/i);
+  });
+
+  test('mientras no llegue al techo, los objetivos avanzan igual que siempre', () => {
+    const s = sugerirCarga([intento(0, [20, 21, 30], [20, 21, null])], PLAN_CORPORAL,
+                           ej('plancha'), reglas);
+    assert.equal(s.motivo, 'seguir');
+    assert.deepEqual(s.objetivos, [21, 22, null]);
+  });
+});
+
+describe('lastre: el número son los kilos agregados', () => {
+  test('sube de a los escalones del lastre, no los de la barra', () => {
+    const plan = { ...PLAN, ejercicioId: 'dominadas' };
+    const s = sugerirCarga([intento(5, [10, 10, 10], [10, 10, null])], plan, ej('dominadas'), reglas);
+    assert.equal(s.motivo, 'subir');
+    assert.equal(s.pesoKg, 6.25, 'el lastre salta de a 1,25 kg');
+  });
+
+  test('desde cero lastre también puede subir', () => {
+    const plan = { ...PLAN, ejercicioId: 'dominadas' };
+    const s = sugerirCarga([intento(0, [10, 10, 10], [10, 10, null])], plan, ej('dominadas'), reglas);
     assert.equal(s.pesoKg, 1.25);
   });
 });
 
 // =====================================================================
-// El signo invertido de los asistidos. Si esto se rompe, la app le dice a alguien que
-// está mejorando que se ponga MÁS ayuda, y nadie se entera nunca.
+// De a cuánto sube: el equipo, y la columna que lo pisa.
 // =====================================================================
 
-describe('sugerirCarga — asistidos: progresar es BAJAR la ayuda', () => {
-  test('completar el rango baja los kilos de ayuda', () => {
-    const s = sugerirCarga([intento(30, [10, 10, 10])], PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
-    assert.equal(s.motivo, 'subir');
-    assert.equal(s.modo, 'asistencia');
-    assert.equal(s.pesoKg, 25, 'menos ayuda es progresar');
-    assert.match(s.explicacion, /Bajá la ayuda/);
+describe('saltoDe — cuántos kilos se suman', () => {
+  test('por defecto, el del equipo', () => {
+    const equipo = reglas.equipos['barra'];
+    assert.equal(saltoDe(ej('press-banca'), equipo), equipo.subirKg);
   });
 
-  test('la ayuda nunca baja de cero', () => {
-    for (let ayuda = 0; ayuda <= 60; ayuda += 5) {
-      const s = sugerirCarga([intento(ayuda, [10, 10, 10])], PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
-      assert.ok(s.pesoKg !== null && s.pesoKg >= 0, 'con ' + ayuda + ' kg de ayuda sugirió ' + s.pesoKg);
-      if (ayuda > 0) assert.ok(s.pesoKg !== null && s.pesoKg < ayuda, 'tendría que haber bajado la ayuda');
-    }
+  test('la columna subir_kg del ejercicio pisa la del equipo', () => {
+    const equipo = reglas.equipos['barra'];
+    const lento = { ...ej('press-banca'), subirKg: 1 };
+    assert.equal(saltoDe(lento, equipo), 1);
   });
 
-  test('sin nada de ayuda manda al ejercicio sin asistencia', () => {
-    const s = sugerirCarga([intento(0, [10, 10, 10])], PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
-    assert.equal(s.motivo, 'mantener');
-    assert.match(s.explicacion, /sin nada de ayuda/);
+  test('y eso se ve en la sugerencia: el press militar puede subir más lento que la sentadilla', () => {
+    const lento = { ...ej('press-militar'), subirKg: 1 };
+    const s = sugerirCarga([intento(40, [10, 10, 10], [10, 10, null])],
+                           { ...PLAN, ejercicioId: 'press-militar' }, lento, reglas);
+    // 41 no se puede armar con una barra que salta de a 2,5: queda en el escalón más cercano.
+    assert.equal(s.pesoKg, 40 + reglas.equipos['barra'].incrementoMinimoKg);
   });
 
-  test('estancarse SUBE la ayuda, que acá es el deload', () => {
-    const historial = [intento(30, [5, 5, 4]), intento(30, [5, 4, 4])];
-    const s = sugerirCarga(historial, PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
-    assert.equal(s.motivo, 'bajar');
-    assert.equal(s.pesoKg, 35, 'el deload de un asistido es más ayuda, no menos');
-    assert.match(s.explicacion, /Subí la ayuda/);
-  });
-
-  test('subir la ayuda por su cuenta se respeta como retroceso', () => {
-    const historial = [intento(35, [8, 7, 7]), intento(30, [5, 5, 4])];
-    const s = sugerirCarga(historial, PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
-    assert.equal(s.motivo, 'bajaste-el-peso');
-    assert.equal(s.pesoKg, 35);
+  test('un subir_kg vacío o cero no pisa nada', () => {
+    const equipo = reglas.equipos['barra'];
+    assert.equal(saltoDe({ ...ej('press-banca'), subirKg: 0 }, equipo), equipo.subirKg);
+    assert.equal(saltoDe(ej('press-banca'), equipo), equipo.subirKg);
   });
 });
 
-describe('sugerirCarga — mantener', () => {
-  test('si no completó el rango se queda igual y apunta al techo', () => {
-    const s = sugerirCarga([intento(40, [12, 11, 10])], PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.motivo, 'mantener');
+describe('redondearACargaPosible — los pesos que se pueden armar de verdad', () => {
+  test('una barra olímpica no puede pesar 41 kg', () => {
+    assert.equal(redondearACargaPosible(41, reglas.equipos['barra']), 40);
+    assert.equal(redondearACargaPosible(41.5, reglas.equipos['barra']), 42.5);
+  });
+
+  test('nunca devuelve menos que la barra vacía', () => {
+    assert.equal(redondearACargaPosible(5, reglas.equipos['barra']), 20);
+  });
+
+  test('con incremento cero no hay nada que redondear', () => {
+    assert.equal(redondearACargaPosible(13.7, reglas.equipos['peso-corporal']), 13.7);
+  });
+
+  test('la banda no se mide en kilos, así que tampoco redondea', () => {
+    assert.equal(redondearACargaPosible(3, reglas.equipos['banda']), 3);
+  });
+
+  test('el usuario nunca queda trabado: si el redondeo no mueve, empujamos un escalón', () => {
+    // Con salto más chico que el escalón del equipo, redondear devolvería el mismo peso.
+    const trabado = { ...ej('press-banca'), subirKg: 0.1 };
+    const s = sugerirCarga([intento(40, [10, 10, 10], [10, 10, null])], PLAN, trabado, reglas);
+    assert.ok(/** @type {number} */ (s.pesoKg) > 40, 'tiene que subir algo sí o sí');
+  });
+});
+
+describe('redondear2 — la aritmética de los decimales', () => {
+  test('arregla lo que hace mal la computadora', () => {
+    assert.equal(redondear2(41.000000000000006), 41);
+    assert.equal(redondear2(2.5 * 3), 7.5);
+  });
+});
+
+describe('describirObjetivos — cómo se cuenta en pantalla', () => {
+  test('dos números y la última al fallo', () => {
+    assert.equal(describirObjetivos([6, 7, null]), '6 y 7, y la última al fallo');
+  });
+
+  test('un solo número y la última al fallo', () => {
+    assert.equal(describirObjetivos([6, null]), '6, y la última al fallo');
+  });
+
+  test('todas al fallo', () => {
+    assert.equal(describirObjetivos([null]), 'al fallo');
+  });
+});
+
+// =====================================================================
+// Historial viejo, guardado antes de que existiera esta regla.
+// =====================================================================
+
+describe('historial de antes de esta regla', () => {
+  test('un intento sin objetivos no rompe nada', () => {
+    const viejo = { fechaTs: AYER, pesoKg: 40, reps: [8, 8, 9] };
+    const s = sugerirCarga([viejo], PLAN, ej('press-banca'), reglas);
+    assert.ok(Array.isArray(s.objetivos));
+    assert.equal(s.objetivos.length, PLAN.series);
     assert.equal(s.pesoKg, 40);
-    assert.equal(s.repsObjetivo, 12);
-  });
-});
-
-describe('sugerirCarga — el usuario bajó el peso por su cuenta', () => {
-  test('respeta la baja en vez de mandarlo de vuelta arriba', () => {
-    const historial = [intento(35, [10, 10, 9]), intento(40, [9, 8, 8])];
-    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.motivo, 'bajaste-el-peso');
-    assert.equal(s.pesoKg, 35);
-    assert.equal(s.repsObjetivo, 12);
   });
 
-  test('y no lo baja de nuevo por fracasos viejos con más peso', () => {
-    const historial = [intento(35, [10, 9, 8]), intento(40, [9, 8, 8]), intento(40, [9, 8, 7])];
-    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
-    assert.notEqual(s.motivo, 'bajar');
-    assert.equal(s.pesoKg, 35);
-  });
-});
-
-describe('sugerirCarga — bajar por estancamiento', () => {
-  test('después de dos fracasos seguidos al mismo peso, baja', () => {
-    const historial = [intento(40, [10, 9, 8]), intento(40, [9, 9, 8])];
-    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.motivo, 'bajar');
-    assert.equal(s.pesoKg, 35);
-    assert.equal(s.repsObjetivo, 8);
-  });
-
-  test('un solo fracaso no alcanza para bajar', () => {
-    const s = sugerirCarga([intento(40, [10, 9, 8])], PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.motivo, 'mantener');
-  });
-
-  test('nunca baja de la barra vacía', () => {
-    const historial = [intento(20, [5, 5, 5]), intento(20, [5, 5, 4])];
-    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.pesoKg, 20, 'no se puede levantar menos que una barra vacía');
-  });
-});
-
-describe('sugerirCarga — datos mal cargados', () => {
-  test('con un equipo que no está en reglas.json avisa pero no se rompe', () => {
-    const inventado = { ...ej('press-banca'), equipo: 'inventado' };
-    const s = sugerirCarga([intento(40, [12, 12, 12])], PLAN_BARRA, inventado, reglas);
+  test('si en ese intento llegó al techo en todas, sube igual', () => {
+    const viejo = { fechaTs: AYER, pesoKg: 40, reps: [10, 10, 10] };
+    const s = sugerirCarga([viejo], PLAN, ej('press-banca'), reglas);
     assert.equal(s.motivo, 'subir');
-    assert.ok(s.pesoKg !== null && s.pesoKg > 40);
-    assert.match(String(s.advertencia), /no está en reglas\.json/);
+    assert.equal(s.pesoKg, 42.5);
+  });
+});
+
+// =====================================================================
+// Datos mal cargados: la app no puede romperse en el medio del gimnasio.
+// =====================================================================
+
+describe('cuando los datos vienen mal', () => {
+  test('un equipo que no existe en reglas.json avisa y sigue con saltos de 1 kg', () => {
+    const inventado = { ...ej('press-banca'), equipo: 'teletransportador' };
+    const s = sugerirCarga([intento(40, [10, 10, 10], [10, 10, null])], PLAN, inventado, reglas);
+    assert.ok(s.advertencia, 'tiene que avisar');
+    assert.equal(s.pesoKg, 41);
   });
 
-  test('todos los equipos del catálogo están definidos en reglas.json', () => {
-    for (const e of catalogo) {
-      assert.ok(reglas.equipos[e.equipo],
-        'el ejercicio "' + e.id + '" usa el equipo "' + e.equipo + '", que no existe en reglas.json');
+  test('un ejercicio sin equipo cargado también sigue funcionando', () => {
+    const sinEquipo = { ...ej('press-banca'), equipo: '' };
+    const s = sugerirCarga([intento(40, [10, 10, 10], [10, 10, null])], PLAN, sinEquipo, reglas);
+    assert.match(/** @type {string} */ (s.advertencia), /no tiene equipo/i);
+    assert.equal(s.pesoKg, 41);
+  });
+
+  test('siempre devuelve una explicación para mostrar', () => {
+    const casos = [
+      sugerirCarga([], PLAN, ej('press-banca'), reglas),
+      sugerirCarga([intento(40, [6, 7, 9], [6, 7, null])], PLAN, ej('press-banca'), reglas),
+      sugerirCarga([intento(40, [10, 10, 10], [10, 10, null])], PLAN, ej('press-banca'), reglas)
+    ];
+    for (const s of casos) {
+      assert.ok(typeof s.explicacion === 'string' && s.explicacion.length > 0);
     }
   });
+});
 
-  test('todos los equipos de reglas.json tienen subirKg', () => {
+// =====================================================================
+// Los datos del socio.
+// =====================================================================
+
+describe('datos/reglas.json', () => {
+  test('todos los equipos tienen subirKg', () => {
     for (const [clave, eq] of Object.entries(reglas.equipos)) {
       assert.equal(typeof eq.subirKg, 'number', 'al equipo "' + clave + '" le falta subirKg');
     }
   });
 
-  test('todos los sustitutos apuntan a ejercicios que existen', () => {
-    const ids = new Set(catalogo.map((e) => e.id));
-    for (const e of catalogo) {
-      for (const s of e.sustitutos || []) {
-        assert.ok(ids.has(s), 'el ejercicio "' + e.id + '" tiene como sustituto a "' + s + '", que no existe');
-      }
+  test('ya no quedan los números de la regla vieja', () => {
+    const p = /** @type {any} */ (reglas).progresion;
+    if (p) {
+      assert.equal(p.bajarPorcentaje, undefined, 'el deload automático ya no existe');
+      assert.equal(p.sesionesFallidasParaBajar, undefined, 'el deload automático ya no existe');
+      assert.equal(p.multiplicadorSiFueFacil, undefined, 'los botones de esfuerzo ya no existen');
     }
+  });
+
+  test('están los equipos nuevos de la planilla', () => {
+    assert.ok(reglas.equipos['banda'], 'falta el equipo banda');
+    assert.ok(reglas.equipos['disco'], 'falta el equipo disco');
+    assert.equal(reglas.equipos['banda'].incrementoMinimoKg, 0, 'la banda no se mide en kilos');
+    assert.equal(reglas.equipos['disco'].incrementoMinimoKg, 2.5);
   });
 });
 
-// =====================================================================
-// El catálogo REAL del socio. Acá no se prueba la lógica: se prueba que los 184
-// ejercicios de la planilla puedan pasar por la progresión sin romper nada. Es lo que
-// separa "los tests pasan" de "la app funciona con los datos de verdad".
-// =====================================================================
 describe('el catálogo real de la planilla', () => {
   test('hay ejercicios cargados y todos tienen id, nombre y grupo', () => {
     assert.ok(catalogoReal.length > 0, 'datos/ejercicios.json está vacío');
@@ -385,6 +562,27 @@ describe('el catálogo real de la planilla', () => {
     for (const e of catalogoReal) {
       assert.ok(!vistos.has(e.id), 'el id "' + e.id + '" está repetido');
       vistos.add(e.id);
+    }
+  });
+
+  test('todo equipo cargado existe en reglas.json', () => {
+    /*
+     * No se exige acá que TODOS tengan equipo. Un equipo vacío es un dato que el socio
+     * todavía no completó, y la app lo banca suponiendo saltos de 1 kg. Quién está sin
+     * cargar lo dice el validador, por nombre, en cada corrida: ese es el canal para eso.
+     * Lo que sí es un error de verdad, y se revisa acá, es un equipo escrito que no existe.
+     */
+    for (const e of catalogoReal) {
+      if (!e.equipo) continue;
+      assert.ok(reglas.equipos[e.equipo],
+        'el ejercicio "' + e.id + '" usa el equipo "' + e.equipo + '", que no está en reglas.json');
+    }
+  });
+
+  test('ya no queda ningún peso inicial cargado', () => {
+    for (const e of catalogoReal) {
+      assert.equal(/** @type {any} */ (e).pesoInicialKg, undefined,
+        'el ejercicio "' + e.id + '" todavía tiene peso inicial, y la app ya no recomienda peso');
     }
   });
 
@@ -404,14 +602,9 @@ describe('el catálogo real de la planilla', () => {
     }
   });
 
-  /*
-   * El caso que la planilla real destapó: el socio carga `equipo: peso-corporal` y marca
-   * la casilla `admite_asistencia`. Si la app mirara la columna sola, el escalón sería 0
-   * y la pantalla no dejaría anotar los kilos de ayuda de la máquina.
-   */
-  test('en los asistidos, el escalón sale del equipo de asistencia y no de la columna', () => {
+  test('en los asistidos el escalón sale del equipo de asistencia, no de la columna', () => {
     const asistidos = catalogoReal.filter((e) => e.admiteAsistencia);
-    assert.ok(asistidos.length > 0, 'la planilla no tiene ningún ejercicio asistido: revisá el fixture');
+    assert.ok(asistidos.length > 0, 'la planilla no tiene ningún ejercicio asistido');
     for (const e of asistidos) {
       const eq = equipoDeCarga(e, reglas);
       assert.ok(eq, 'el asistido "' + e.id + '" se quedó sin equipo de carga');
@@ -420,202 +613,28 @@ describe('el catálogo real de la planilla', () => {
     }
   });
 
-  test('ninguna ficha rompe la sugerencia de carga, ni sin historial ni con historial', () => {
-    /** @type {EjercicioPlanificado} */
-    const plan = { ejercicioId: 'x', series: 3, repsMin: 8, repsMax: 12, descansoSeg: 90 };
+  test('los de lastre también tienen escalón propio', () => {
+    for (const e of catalogoReal.filter((x) => x.admiteLastre)) {
+      const eq = equipoDeCarga(e, reglas);
+      assert.ok(eq && eq.incrementoMinimoKg > 0, 'el ejercicio con lastre "' + e.id + '" tiene escalón 0');
+    }
+  });
+
+  test('ninguna ficha rompe la sugerencia, ni sin historial ni con historial', () => {
     for (const e of catalogoReal) {
-      const primera = sugerirCarga([], { ...plan, ejercicioId: e.id }, e, reglas);
-      assert.ok(typeof primera.explicacion === 'string' && primera.explicacion.length > 0,
-        'el ejercicio "' + e.id + '" no produjo explicación en la primera vez');
+      const plan = { ...PLAN, ejercicioId: e.id };
 
-      const conHistorial = sugerirCarga(
-        [{ fechaTs: Date.now(), pesoKg: 20, reps: [12, 12, 12] }],
-        { ...plan, ejercicioId: e.id }, e, reglas
-      );
-      assert.ok(typeof conHistorial.pesoKg === 'number' && Number.isFinite(conHistorial.pesoKg),
+      const primera = sugerirCarga([], plan, e, reglas);
+      assert.ok(primera.explicacion.length > 0, 'el ejercicio "' + e.id + '" no produjo explicación');
+      assert.equal(primera.objetivos.length, plan.series);
+
+      const seguido = sugerirCarga([intento(20, [6, 7, 9], [6, 7, null])], plan, e, reglas);
+      assert.ok(typeof seguido.pesoKg === 'number' && Number.isFinite(seguido.pesoKg),
         'el ejercicio "' + e.id + '" devolvió un peso que no es un número');
-    }
-  });
-});
 
-// =====================================================================
-// Los botones de esfuerzo. La regla es: las repeticiones deciden SI progresa, el boton
-// decide CUANTO. El boton nunca puede frenar ni forzar la progresion.
-// =====================================================================
-
-describe('sugerirCarga — botones Fácil / Justo / No llegué', () => {
-  test('completar el rango y marcar Fácil da salto doble', () => {
-    const s = sugerirCarga([intento(40, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.motivo, 'subir');
-    assert.equal(s.pesoKg, 45, '40 + 2 × 2,5 kg');
-    assert.match(s.explicacion, /salto es doble/);
-  });
-
-  test('marcar Justo da el salto normal', () => {
-    const s = sugerirCarga([intento(40, [12, 12, 12], 'justo')], PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.pesoKg, 42.5);
-    assert.doesNotMatch(s.explicacion, /salto es doble/);
-  });
-
-  test('sin botón contestado se comporta como Justo', () => {
-    const s = sugerirCarga([intento(40, [12, 12, 12])], PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.pesoKg, 42.5);
-  });
-
-  test('marcar No llegué habiendo completado NO frena: mandan los datos objetivos', () => {
-    const s = sugerirCarga([intento(40, [12, 12, 12], 'no-llegue')], PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.motivo, 'subir');
-    assert.equal(s.pesoKg, 42.5);
-  });
-
-  test('marcar Fácil SIN completar el rango no hace subir nada', () => {
-    const s = sugerirCarga([intento(40, [12, 11, 10], 'facil')], PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.motivo, 'mantener');
-    assert.equal(s.pesoKg, 40);
-  });
-
-  test('marcar Fácil no evita el deload por estancamiento', () => {
-    const historial = [intento(40, [10, 9, 8], 'facil'), intento(40, [9, 9, 8], 'facil')];
-    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.motivo, 'bajar');
-    assert.equal(s.pesoKg, 35);
-  });
-
-  test('en asistidos con poca ayuda, el tope bloquea el salto doble', () => {
-    // Bajar de 30 a 20 kg de ayuda es cargarse 10 kg más del propio cuerpo de golpe: un
-    // 33% más de dificultad. El tope lo bloquea y baja un escalón, que es lo correcto.
-    const s = sugerirCarga([intento(30, [10, 10, 10], 'facil')], PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
-    assert.equal(s.pesoKg, 25);
-    assert.doesNotMatch(s.explicacion, /salto es doble/);
-  });
-
-  test('en asistidos con mucha ayuda, el salto doble sí entra', () => {
-    // Con 60 kg de ayuda, bajar 10 es un 16,7%: entra en el tope.
-    const s = sugerirCarga([intento(60, [10, 10, 10], 'facil')], PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
-    assert.equal(s.pesoKg, 50);
-    assert.match(s.explicacion, /salto es doble/);
-  });
-
-  test('con Fácil la ayuda tampoco baja de cero', () => {
-    const s = sugerirCarga([intento(5, [10, 10, 10], 'facil')], PLAN_ASISTIDO, ej('dominadas-asistidas'), reglas);
-    assert.ok(s.pesoKg !== null && s.pesoKg >= 0);
-  });
-
-  test('en todo el rango, Fácil siempre sube más que Justo', () => {
-    for (let peso = 20; peso <= 200; peso += 2.5) {
-      const conFacil = sugerirCarga([intento(peso, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), reglas);
-      const conJusto = sugerirCarga([intento(peso, [12, 12, 12], 'justo')], PLAN_BARRA, ej('press-banca'), reglas);
-      // Desde 25 kg el salto doble entra en el tope y tiene que ser estrictamente mayor.
-      // Por debajo, el tope lo bloquea y los dos dan lo mismo: eso es correcto, no un error.
-      const debeSuperar = peso >= 25;
-      const ok = debeSuperar ? conFacil.pesoKg > conJusto.pesoKg : conFacil.pesoKg >= conJusto.pesoKg;
-      assert.ok(conFacil.pesoKg !== null && conJusto.pesoKg !== null && ok,
-        'con ' + peso + ' kg: fácil dio ' + conFacil.pesoKg + ' y justo dio ' + conJusto.pesoKg);
-    }
-  });
-
-  test('si el multiplicador es 1, el botón no cambia nada', () => {
-    const sinMultiplicador = { ...reglas, progresion: { ...reglas.progresion, multiplicadorSiFueFacil: 1 } };
-    const s = sugerirCarga([intento(40, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), sinMultiplicador);
-    assert.equal(s.pesoKg, 42.5);
-  });
-});
-
-// =====================================================================
-// Las dos guardas del salto doble. Sin estas, el deload no sirve para nada.
-// =====================================================================
-
-describe('huboRetroceso', () => {
-  test('sin historial o con uno solo, no hubo retroceso', () => {
-    assert.equal(huboRetroceso([], 1), false);
-    assert.equal(huboRetroceso([intento(40, [12, 12, 12])], 1), false);
-  });
-
-  test('subir siempre no es retroceso', () => {
-    assert.equal(huboRetroceso([intento(42.5, [8, 8, 8]), intento(40, [12, 12, 12])], 1), false);
-  });
-
-  test('haber bajado alguna vez sí lo es', () => {
-    assert.equal(huboRetroceso([intento(35, [10, 9, 8]), intento(40, [9, 8, 8])], 1), true);
-  });
-
-  test('en asistidos el signo va al revés: bajar la ayuda es progresar', () => {
-    assert.equal(huboRetroceso([intento(25, [10, 10, 10]), intento(30, [10, 10, 10])], -1), false);
-    assert.equal(huboRetroceso([intento(35, [5, 5, 4]), intento(30, [5, 5, 4])], -1), true);
-  });
-});
-
-describe('cabeElSaltoDoble', () => {
-  test('12,5% entra', () => {
-    assert.equal(cabeElSaltoDoble(40, 5, reglas), true);
-  });
-  test('40% no entra: es el caso de las mancuernas de 10 kg', () => {
-    assert.equal(cabeElSaltoDoble(10, 4, reglas), false);
-  });
-  test('con carga cero no se puede calcular el porcentaje, así que pasa', () => {
-    assert.equal(cabeElSaltoDoble(0, 2.5, reglas), true);
-  });
-});
-
-describe('el salto doble NO rebota después de un deload', () => {
-  test('el escenario completo: 60 kg, falla dos veces, baja, y no vuelve a pasarse', () => {
-    // Llegó a 60, falló dos sesiones, el deload lo dejó en 55. Ahora completa y marca
-    // Fácil. Sin guarda volvería a 60 y después a 65, o sea MÁS ARRIBA del peso donde ya
-    // había fallado, en dos sesiones. El deload no habría servido para nada.
-    const historial = [
-      intento(55, [12, 12, 12], 'facil'),
-      intento(60, [10, 9, 8]),
-      intento(60, [9, 9, 8])
-    ];
-    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.motivo, 'subir');
-    assert.equal(s.pesoKg, 57.5, 'sube normal, no doble');
-    assert.doesNotMatch(s.explicacion, /salto es doble/);
-  });
-
-  test('y sigue desactivado en las sesiones siguientes', () => {
-    const historial = [
-      intento(57.5, [12, 12, 12], 'facil'),
-      intento(55, [12, 12, 12], 'facil'),
-      intento(60, [10, 9, 8]),
-      intento(60, [9, 9, 8])
-    ];
-    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.pesoKg, 60, 'llega a 60 de a un escalón, no de un salto');
-  });
-
-  test('sin retroceso previo, el salto doble sigue funcionando', () => {
-    const historial = [intento(55, [12, 12, 12], 'facil'), intento(52.5, [12, 12, 12])];
-    const s = sugerirCarga(historial, PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.pesoKg, 60);
-  });
-});
-
-describe('el salto doble no puede ser un salto enorme en cargas chicas', () => {
-  /** @type {EjercicioPlanificado} */
-  const PLAN_CURL = { ejercicioId: 'curl-mancuernas', series: 3, repsMin: 10, repsMax: 15, descansoSeg: 60 };
-
-  test('mancuernas de 10 kg: el salto doble sería 40% y se bloquea', () => {
-    const s = sugerirCarga([intento(10, [15, 15, 15], 'facil')], PLAN_CURL, ej('curl-mancuernas'), reglas);
-    assert.equal(s.pesoKg, 12, 'sube un escalón, no dos');
-    assert.doesNotMatch(s.explicacion, /salto es doble/);
-  });
-
-  test('mancuernas de 40 kg: el mismo salto es 10% y sí entra', () => {
-    const s = sugerirCarga([intento(40, [15, 15, 15], 'facil')], PLAN_CURL, ej('curl-mancuernas'), reglas);
-    assert.equal(s.pesoKg, 44);
-    assert.match(s.explicacion, /salto es doble/);
-  });
-
-  test('barra vacía: 25% se bloquea, así que un principiante no salta a 25 kg', () => {
-    const s = sugerirCarga([intento(20, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), reglas);
-    assert.equal(s.pesoKg, 22.5);
-  });
-
-  test('pase lo que pase, siempre sube algo', () => {
-    for (let peso = 20; peso <= 200; peso += 2.5) {
-      const s = sugerirCarga([intento(peso, [12, 12, 12], 'facil')], PLAN_BARRA, ej('press-banca'), reglas);
-      assert.ok(s.pesoKg !== null && s.pesoKg > peso, 'con ' + peso + ' kg no subió');
+      const alTecho = sugerirCarga([intento(20, [10, 10, 10], [10, 10, null])], plan, e, reglas);
+      assert.ok(typeof alTecho.pesoKg === 'number' && Number.isFinite(alTecho.pesoKg),
+        'el ejercicio "' + e.id + '" devolvió un peso que no es un número al llegar al techo');
     }
   });
 });

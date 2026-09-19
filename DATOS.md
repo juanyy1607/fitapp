@@ -5,27 +5,25 @@ rutinas, cuánto sube el peso, cuántos segundos de descanso— vive en archivos
 **Nada de esto está escrito adentro del código.** Cambiar una regla no es una tarea de
 programación.
 
-> ## ⚠ Los números de la pestaña `reglas` son PROVISORIOS
+> ## ⚠ Los números de la pestaña `equipos` son PROVISORIOS
 >
-> Todos los valores de la pestaña `reglas` —y los `subir_kg` de cada equipo— son puestos
-> por defecto para que la app funcione, **no son criterio de entrenamiento**. Están
-> esperando que el socio los confirme o los cambie. El validador lo recuerda en cada
-> corrida mientras `provisorio` siga en `true` en `reglas.json`.
+> Los descansos y los `subir_kg` e `incremento_minimo_kg` de cada equipo son puestos por
+> defecto para que la app funcione, **no son criterio de entrenamiento**. Están esperando
+> que el socio los confirme o los cambie. El validador lo recuerda en cada corrida mientras
+> `provisorio` siga en `true` en `reglas.json`.
 >
 > Ver las **preguntas abiertas** al final de este documento.
 
-> ## 🔴 CONFLICTO SIN RESOLVER: el deload
+> ## ✅ La regla de progresión está cerrada
 >
-> **El socio escribió:** la app **no baja el peso nunca**. El usuario se queda en la carga
-> hasta que la saca.
+> La definió el socio y está implementada exactamente como la definió: cada serie con su
+> propio objetivo, que sube de a una repetición, nunca baja, y el peso sube cuando todas
+> las series llegan al techo del rango. **El peso nunca baja solo.**
 >
-> **Juan pidió:** bajar 10% después de dos sesiones seguidas sin completar el rango.
+> El deload automático que se había implementado antes —bajar 10% después de dos sesiones
+> fallidas— ya no existe. Era la posición de Juan y el socio decidió lo contrario.
 >
-> **Lo que está implementado hoy es la posición de Juan.** Queda anotado acá y en
-> `reglas.json`, y el validador lo repite en cada corrida, para que cuando se discuta quede
-> claro que no se le cambió el criterio al socio por atrás. Si gana la posición del socio,
-> se resuelve poniendo `sesiones_fallidas_para_bajar` en un número muy alto, o sacando la
-> regla: es un cambio de datos, no de código.
+> Ver [LA REGLA DE PROGRESIÓN](#la-regla-de-progresión) más abajo.
 
 ## La regla que no se rompe
 
@@ -75,7 +73,10 @@ sugiera 41 kg cuando con una barra solo existen 40 o 42,5.
 | barra-tecnica | Barra técnica | 1 | 7,5 | 1 |
 | mancuernas | Mancuernas | 2 | 0 | 2 |
 | maquina | Máquina | 5 | 0 | 5 |
+| maquina-guiada | Multipower (barra guiada) | 2,5 | 0 | 2,5 |
 | polea | Polea | 2,5 | 0 | 2,5 |
+| disco | Disco suelto | 2,5 | 0 | 2,5 |
+| banda | Banda elástica | 0 | 0 | 0 |
 | peso-corporal | Peso corporal | 0 | 0 | 0 |
 | lastre | Lastre (disco o cinturón) | 1,25 | 0 | 1,25 |
 | asistencia | Asistencia (máquina o banda) | 5 | 0 | 5 |
@@ -83,7 +84,19 @@ sugiera 41 kg cuando con una barra solo existen 40 o 42,5.
 - **`incremento_minimo_kg`**: el salto más chico que se puede hacer. En una barra son 2,5 kg
   porque el disco más chico es de 1,25 y van dos, uno de cada lado. **Poné 0 para peso corporal.**
 - **`peso_base_kg`**: el piso. Una barra olímpica vacía ya pesa 20 kg y no se puede levantar menos.
-- **`subir_kg`**: cuántos kilos sumar cuando el usuario completa el rango de repeticiones.
+- **`subir_kg`**: cuántos kilos sumar cuando todas las series llegan al techo del rango.
+
+> **La banda va con los tres números en cero, igual que peso corporal.** No se mide en
+> kilos: se progresa con repeticiones, o cambiando de banda. Con el incremento en 0 la app
+> ni siquiera muestra el campo del peso, que es lo correcto — si mostrara un número, estaría
+> pidiendo un dato que no existe.
+
+**Los tres últimos no son aparatos, son modos de carga.** `peso-corporal`, `lastre` y
+`asistencia` no se escriben en la columna `equipo` de un ejercicio: salen solos de las
+casillas `es_peso_corporal`, `admite_lastre` y `admite_asistencia`. En la planilla, una
+dominada asistida lleva `equipo: peso-corporal` (el aparato es la barra) y la casilla
+`admite_asistencia` en `si`; la app sabe que el número que anota el usuario son los kilos
+de ayuda, y usa el escalón de `asistencia` y no el de la barra.
 
 > **Por qué `subir_kg` en kilos y no en porcentaje.** Antes esto era un porcentaje y era un
 > parámetro que mentía. Con 2,5% sobre 60 kg el salto da 1,5 kg, o sea menos que el disco
@@ -94,39 +107,114 @@ sugiera 41 kg cuando con una barra solo existen 40 o 42,5.
 
 ### Pestaña `reglas`
 
-Los números de la progresión. Dos columnas nada más. **Todos provisorios.**
+Dos números, y nada más:
 
 | `clave` | `valor` |
 |---|---|
 | descanso_por_defecto_seg | 90 |
 | descanso_entre_ejercicios_seg | 120 |
-| bajar_porcentaje | 10 |
-| sesiones_fallidas_para_bajar | 2 |
-| multiplicador_si_fue_facil | 2 |
-| salto_maximo_porcentaje | 20 |
-
-Cómo se leen, en orden:
-
-1. El usuario se queda con el mismo peso hasta llegar al **techo de repeticiones en todas
-   las series**.
-2. Cuando lo logra, el peso sube el `subir_kg` de su equipo y las repeticiones vuelven al
-   piso. Si ese salto no cae en una carga que exista, se redondea a la más cercana que sí;
-   y si el redondeo devolviera el mismo peso, sube un escalón igual — si no, el usuario
-   quedaría trabado para siempre.
-3. Si pasa `sesiones_fallidas_para_bajar` veces seguidas sin completar el rango, el peso
-   baja `bajar_porcentaje` y vuelve a subir desde ahí.
-4. Si además marcó **Fácil** en la última serie, el salto se multiplica por
-   `multiplicador_si_fue_facil`. Con 1, el botón no cambia nada. Ver la sección de abajo.
-
-> **Por qué el deload sí sigue siendo un porcentaje.** Acá el porcentaje no miente: a
-> cualquier carga razonable, un 10% da más que el disco más chico, y además tiene sentido
-> que un deload sea proporcional a lo que levantás. Igual tiene un piso de un escalón para
-> que no se quede en cero cuando la carga es muy baja.
 
 **Dos descansos distintos.** `descanso_por_defecto_seg` es entre series del mismo
 ejercicio. `descanso_entre_ejercicios_seg` es al terminar un ejercicio y pasar al
 siguiente, que en la práctica es más largo: cambiás de aparato y capaz tenés que esperar
 que se desocupe.
+
+> **La progresión no tiene números que ajustar.** Antes había cuatro
+> (`bajar_porcentaje`, `sesiones_fallidas_para_bajar`, `multiplicador_si_fue_facil`,
+> `salto_maximo_porcentaje`) y murieron todos con la regla vieja. En la regla nueva los
+> objetivos salen del rango de repeticiones de cada ejercicio, y los kilos que se suben
+> salen del `subir_kg` del equipo o del ejercicio. No hay ninguna perilla suelta. El
+> validador avisa si alguien vuelve a pegar los parámetros viejos.
+
+---
+
+## LA REGLA DE PROGRESIÓN
+
+La cerró el socio. **Está implementada exactamente así.** Si algún día hay que cambiarla,
+se cambia acá y en `logica/progresion.js`, que es el único lugar del código donde vive.
+
+### Cada serie tiene su propio objetivo
+
+Esto es lo que la hace distinta de casi cualquier app: no hay un número para todo el
+ejercicio, hay uno por serie, y cada uno avanza por su cuenta.
+
+1. **El ejercicio tiene un rango** de repeticiones, definido en la pestaña `plan`.
+   Por ejemplo, 6 a 10.
+
+2. **Al estrenar un peso**, cada serie arranca con su objetivo:
+
+   | Serie | Objetivo |
+   |---|---|
+   | 1 | el piso del rango (6) |
+   | 2 | el piso más uno (7) |
+   | última | **al fallo**, sin número |
+
+3. **Después de cada sesión, serie por serie:** si llegó o pasó su objetivo, el objetivo de
+   esa serie sube **una** repetición para la próxima, con tope en el techo del rango. Si no
+   llegó, queda igual. **Nunca baja.**
+
+4. **Cuando todas las series llegan al techo**, en la siguiente sube el peso (el `subir_kg`
+   del equipo, o el del ejercicio si está cargado) y los objetivos vuelven a piso, piso+1,
+   fallo.
+
+5. **El peso nunca baja solo.** No hay deload automático.
+
+### Cómo se ve en ocho semanas
+
+Rango 6-10, tres series, barra que sube de a 2,5 kg:
+
+```
+        objetivos          lo que hizo
+  s1     6 ·  7 · fallo  →   6 /  7 /  9
+  s2     7 ·  8 · fallo  →   7 /  8 / 10
+  s3     8 ·  9 · fallo  →   8 /  9 / 10
+  s4     9 · 10 · fallo  →   9 / 10 / 10
+  s5    10 · 10 · fallo  →  10 / 10 / 10   ← todas al techo
+  s6     6 ·  7 · fallo      con 2,5 kg más
+```
+
+### Por qué así
+
+**Una serie estancada no frena a las otras.** Si llegás a tu objetivo en la serie 1 pero no
+en la 2, la 1 sigue avanzando y la 2 te espera. Con un solo número para todo el ejercicio,
+la serie más floja frenaba a todas.
+
+**Un mal día no te castiga.** Dormiste mal, viniste cansado, no llegaste a nada: los
+objetivos quedan donde estaban. La semana que viene retomás exactamente ahí. Nada retrocede.
+
+**El que arranca liviano se corrige solo.** Si el peso que eligió era trivial, hace el
+techo del rango en las tres series a la primera y el peso sube de una. No hace falta que la
+app le pregunte nada.
+
+**La última al fallo da el margen de arriba.** Es la serie que dice cuánto le sobra de
+verdad, sin que tenga que estimarlo.
+
+### Lo que la regla NO cubre
+
+En los ejercicios **sin kilos** —peso corporal puro, banda elástica— llegar al techo del
+rango no puede subir nada, porque no hay qué sumar. Ahí la app deja los objetivos en el
+techo y lo dice en pantalla. Es una consecuencia de la regla, no un error: si el socio
+quiere que esos ejercicios sigan progresando, hay que definirle una salida (más
+repeticiones, otra banda, una variante más difícil).
+
+### El peso de arranque lo elige el usuario
+
+**La app no recomienda con cuántos kilos empezar.** El socio fue explícito: nadie que no
+esté ahí puede saberlo. La primera vez que aparece un ejercicio, el campo del peso está
+vacío, el usuario prueba en el gimnasio y anota el que haya usado.
+
+Por eso ya no existe la columna `peso_inicial_kg`. Si quedó cargada en la planilla, se
+ignora y el validador avisa.
+
+### Lo que se guarda por serie
+
+El historial guarda, en cada serie, **el objetivo que tenía además de lo que se hizo**.
+
+No es redundante: 7 repeticiones es un objetivo cumplido si le pedían 7, y uno fallado si
+le pedían 9. El número solo no lo dice, y el objetivo no se puede reconstruir después. Es
+el mismo tipo de dato que antes eran los botones de esfuerzo.
+
+---
 
 ### Pestaña `ejercicios`
 
@@ -146,7 +234,7 @@ que se desocupe.
 | `es_peso_corporal` | no | `si` si el cuerpo aporta la carga base. |
 | `admite_lastre` | no | `si` si se le puede agregar peso (dominadas con disco). |
 | `admite_asistencia` | no | `si` si se puede hacer con ayuda de máquina o banda. |
-| `peso_inicial_kg` | no | Con cuánto arrancar la primera vez. Vacío = lo elige el usuario. |
+| `subir_kg` | no | De a cuántos kilos sube **este** ejercicio, pisando el de su equipo. Vacío = manda el equipo. Ver abajo. |
 | `sustitutos` | no | Lista de `id`, separada por coma. Qué hacer si la máquina está ocupada. |
 | `tecnica` | no | Texto libre. |
 | `errores_comunes` | no | Texto libre. |
@@ -166,10 +254,19 @@ adentro usa `esUnilateral` con verdadero o falso. La traducción pasa en **un so
 toca ese archivo y nada más. El validador usa esa misma función, así que lo que revisa es
 exactamente lo que la app termina viendo.
 
-> **`peso_inicial_kg` va acá y no en la rutina.** Es propiedad del ejercicio: el press de
-> banca arranca en 20 kg independientemente de en qué rutina aparezca. Si estuviera en cada
-> rutina, un mismo ejercicio podría tener tres pesos iniciales distintos sin que nadie se
-> entere. La rutina lo puede pisar, pero tiene que decirlo explícitamente.
+**La columna `subir_kg`: cuando un equipo no alcanza.** El `subir_kg` vive en la pestaña
+`equipos`, o sea que todos los ejercicios de barra suben de a 2,5 kg. Eso es discutible: el
+press militar progresa mucho más lento que la sentadilla y las dos usan barra. Esta columna
+existe para eso — se carga solo en los ejercicios donde el número del equipo no sirve, y el
+resto sigue mandándose por el equipo.
+
+Hoy está **vacía en toda la planilla**, a propósito: el socio la va a completar con uso
+real, cuando haya datos de gente entrenando, en vez de adivinar ahora.
+
+> **Ojo con un número que no se puede armar.** Un `subir_kg` de 1 kg en un ejercicio de
+> barra no hace nada: la barra salta de a 2,5 y el redondeo se lo come. Sería el mismo
+> error que ya nos comimos con el porcentaje de subida. El validador lo rechaza y te dice
+> cuál es el escalón mínimo de ese equipo.
 
 **Las tres casillas de carga y qué significan.** Definen cómo se lee el número de kilos que
 registra el usuario:
@@ -221,17 +318,21 @@ Una fila por cada día de cada rutina.
 
 Qué ejercicios tiene cada día. Una fila por ejercicio.
 
-| `rutina_id` | `dia_id` | `orden` | `ejercicio_id` | `series` | `reps_min` | `reps_max` | `descanso_seg` | `descanso_despues_seg` | `peso_inicial_kg` |
-|---|---|---|---|---|---|---|---|---|---|
-| full-body-principiante | a | 1 | sentadilla | 3 | 8 | 12 | 120 | | |
-| full-body-principiante | a | 2 | press-banca | 3 | 8 | 12 | 120 | 180 | |
+| `rutina_id` | `dia_id` | `orden` | `ejercicio_id` | `series` | `reps_min` | `reps_max` | `descanso_seg` | `descanso_despues_seg` |
+|---|---|---|---|---|---|---|---|---|
+| full-body-principiante | a | 1 | sentadilla-barra-libre | 3 | 8 | 12 | 120 | |
+| full-body-principiante | a | 2 | press-banca-plano-barra-libre | 3 | 8 | 12 | 120 | 180 |
 
-- `reps_min` y `reps_max` **no pueden ser iguales**: sin rango, el peso nunca sube.
+- **`reps_min` y `reps_max` son el rango del que sale todo.** De ahí salen los objetivos de
+  cada serie al estrenar un peso (`reps_min`, `reps_min`+1, fallo), el tope hasta donde
+  pueden subir, y la condición para subir el peso. Es la columna que más decide de la
+  planilla entera.
+- `reps_min` y `reps_max` **no pueden ser iguales**: sin rango, los objetivos no tienen a
+  dónde avanzar y el peso nunca sube.
+- `series` define cuántos objetivos hay. **La última siempre va al fallo**, sean 2, 3 o 5.
 - `descanso_seg` es entre series de ese ejercicio.
 - `descanso_despues_seg` es opcional: solo si este ejercicio necesita un descanso distinto
   al general antes de pasar al siguiente. Vacío = se usa el de `reglas`.
-- `peso_inicial_kg` **normalmente va vacío**: el valor vive en la pestaña `ejercicios`. Se
-  completa solo cuando esta rutina en particular necesita arrancar distinto.
 - `orden` define en qué orden aparecen en pantalla.
 
 ---
@@ -266,79 +367,23 @@ de que eso llegue al teléfono de alguien.
 
 ## Preguntas abiertas para el socio
 
-Ninguna de estas bloquea la carga de datos, pero todas cambian números que hoy están
-puestos por defecto.
+Ninguna bloquea la carga de datos, pero las dos cambian números que hoy están puestos por
+defecto.
 
-1. **¿Qué barras hay de verdad en el gimnasio?** Dejamos `barra` (20 kg), `barra-liviana`
-   (10 kg) y `barra-tecnica` (7,5 kg). Hace falta confirmar cuáles existen y cuánto pesan,
-   y sobre todo **con qué barra arranca un principiante que no puede mover la olímpica
-   vacía**. Hoy, si un ejercicio dice `equipo: barra`, el piso es 20 kg y no hay salida.
-   La otra respuesta posible es que ese principiante no debería estar haciendo ese
-   ejercicio todavía, y que corresponde mandarlo al `sustituto` con mancuernas o máquina.
-   Es decisión de criterio, no técnica.
+1. **¿Qué barras hay de verdad en el gimnasio, además de la olímpica de 20 kg?** Dejamos
+   cargadas `barra` (20 kg), `barra-liviana` (10 kg) y `barra-tecnica` (7,5 kg), pero es
+   una suposición. Hace falta confirmar cuáles existen y cuánto pesan, y sobre todo **con
+   qué barra arranca un principiante que no puede mover la olímpica vacía**. Hoy, si un
+   ejercicio dice `equipo: barra`, el piso es 20 kg y no hay salida. La otra respuesta
+   posible es que ese principiante no debería estar haciendo ese ejercicio todavía, y que
+   corresponde mandarlo al `sustituto` con mancuernas o máquina. Es decisión de criterio,
+   no técnica.
 
-2. **¿`subir_kg` tiene que ser el mismo para todos los ejercicios de un mismo equipo?** Hoy
-   sí, porque vive en la pestaña `equipos`. Subir de a 2,5 kg en sentadilla y en press
-   militar es discutible: el press militar progresa mucho más lento. Si hace falta, se
-   agrega una columna `subir_kg` en `ejercicios` que pise la del equipo. Avisar y lo agrego.
-
-3. **¿Cuántos kilos de ayuda tiene la máquina de asistidas y de a cuánto salta?** Pusimos
-   saltos de 5 kg, que es lo común, pero depende del aparato.
-
-4. **Confirmar los cuatro números de la pestaña `reglas`**: 90 s entre series, 120 s entre
-   ejercicios, deload de 10%, y dos sesiones fallidas antes de bajar.
-
-5. **¿El salto doble cuando marca "Fácil" tiene que ser de 2, o prefiere otro número?**
-   Es el `multiplicador_si_fue_facil`. Ver la sección de abajo.
-
-6. **El Multipower: ¿se cuenta el peso de la barra?** La planilla trae 17 ejercicios con
-   `equipo: maquina-guiada`, que no existía en la pestaña `equipos`. Lo agregamos con
-   saltos de 2,5 kg y **piso 0**, o sea que el usuario anota los discos que pone y la
-   barra no cuenta. Es lo más seguro por defecto, porque la barra del Multipower pesa
-   distinto en cada gimnasio y muchas están contrapesadas. Si el socio decide otra cosa,
-   se cambia un número en `reglas.json`.
-
-7. **Nueve ejercicios no tienen equipo cargado.** El validador los lista por nombre en
-   cada corrida. Mientras estén vacíos la app les supone saltos de 1 kg, que anda pero no
-   es el escalón real del aparato.
-
-8. **La planilla no tiene ningún ejercicio de `core`.** No hay plancha, ni abdominales, ni
-   nada del grupo. Puede ser a propósito o puede ser que falte cargarlo; hace falta
-   confirmarlo antes de armar rutinas de verdad.
-
----
-
-## Los botones Fácil / Justo / No llegué
-
-Reemplazan al RIR, que un principiante no sabe estimar. Se preguntan **una sola vez por
-ejercicio, en la última serie** — preguntarlo en cada serie serían unos 36 toques extra
-por sesión, y la fricción es lo que hace que la gente deje de registrar.
-
-**La regla: las repeticiones deciden SI progresás, el botón decide CUÁNTO.**
-
-| Lo que pasó | Lo que hace la app |
-|---|---|
-| Completó el rango + **Fácil** | Sube `subir_kg` × `multiplicador_si_fue_facil` |
-| Completó el rango + **Justo** | Sube `subir_kg` |
-| Completó el rango + **No llegué** | Sube `subir_kg` — mandan los datos objetivos |
-| No completó el rango, cualquier botón | Mantiene el peso |
-
-El botón **nunca** puede hacer que suba sin haber completado el rango, ni frenarlo si lo
-completó. Es a propósito: un principiante estima mal cuánto le faltaba para fallar, así
-que el dato subjetivo no manda sobre el objetivo. Si el esfuerzo decidiera, el que marca
-"Fácil" por optimismo subiría demasiado rápido y el que marca "No llegué" por precaución
-se quedaría quieto para siempre.
-
-Lo que sí aporta el botón es algo que las repeticiones no ven: **completar el rango y que
-además haya sido fácil significa que arrancó demasiado liviano.** Ese es el problema real
-de las primeras semanas —pasarse un mes y medio trepando desde un peso trivial— y el salto
-doble lo corrige.
-
-En los ejercicios asistidos el salto doble baja el doble de ayuda, nunca por debajo de cero.
-
-Los tres botones se guardan en el historial de todas formas, marquen lo que marquen. El
-dato subjetivo no se puede recuperar después, así que dentro de unos meses vamos a poder
-calibrar esta regla con datos reales en vez de con criterio.
+2. **¿Cuánta ayuda da la máquina de asistidas, y de a cuánto salta?** Pusimos saltos de
+   5 kg, que es lo común, pero depende del aparato. Importa más de lo que parece: en los
+   asistidos el número que anota el usuario son los kilos de AYUDA, y progresar es
+   bajarlos. Si el escalón está mal, la progresión de las dominadas asistidas avanza al
+   ritmo equivocado y nadie se da cuenta.
 
 ---
 

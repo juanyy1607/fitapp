@@ -128,14 +128,6 @@ if (reglas) {
     console.log('');
   }
 
-  // El porcentaje de subida se sacó a propósito: con 2,5% sobre 60 kg el salto daba 1,5 kg,
-  // menos que el disco más chico, así que el redondeo se lo comía y el parámetro no hacía
-  // nada hasta los 100 kg. Si alguien lo vuelve a poner, avisamos.
-  if (reglas.progresion && reglas.progresion.subirPorcentaje !== undefined) {
-    mal('progresion.subirPorcentaje ya no se usa: la subida ahora va en kilos absolutos, ' +
-        'en la columna subirKg de cada equipo. Un porcentaje no hacía nada por debajo de los 100 kg.');
-  }
-
   if (!esNumero(reglas.descansoPorDefectoSeg) || reglas.descansoPorDefectoSeg <= 0) {
     mal('descansoPorDefectoSeg tiene que ser un número de segundos mayor que cero');
   }
@@ -143,28 +135,23 @@ if (reglas) {
     mal('falta descansoEntreEjerciciosSeg: es el descanso al pasar de un ejercicio al siguiente');
   }
 
-  const p = reglas.progresion || {};
-  if (!esNumero(p.bajarPorcentaje) || p.bajarPorcentaje <= 0) mal('progresion.bajarPorcentaje tiene que ser mayor que cero');
-  if (!Number.isInteger(p.sesionesFallidasParaBajar) || p.sesionesFallidasParaBajar < 1) {
-    mal('progresion.sesionesFallidasParaBajar tiene que ser un número entero de 1 para arriba');
-  }
-
-  if (p.saltoMaximoPorcentaje !== undefined) {
-    if (!esNumero(p.saltoMaximoPorcentaje) || p.saltoMaximoPorcentaje <= 0) {
-      mal('progresion.saltoMaximoPorcentaje tiene que ser un porcentaje mayor que cero');
-    } else if (p.saltoMaximoPorcentaje < 5) {
-      ojo('progresion.saltoMaximoPorcentaje es ' + p.saltoMaximoPorcentaje +
-          '%: tan bajo, el salto doble no se va a aplicar casi nunca');
-    }
-  }
-
-  // Cuánto se agranda el salto cuando el usuario marca "Fácil". 1 = el botón no hace nada.
-  if (p.multiplicadorSiFueFacil !== undefined) {
-    if (!esNumero(p.multiplicadorSiFueFacil) || p.multiplicadorSiFueFacil < 1) {
-      mal('progresion.multiplicadorSiFueFacil tiene que ser 1 o más. Con 1, el botón "Fácil" no cambia nada.');
-    } else if (p.multiplicadorSiFueFacil > 3) {
-      ojo('progresion.multiplicadorSiFueFacil es ' + p.multiplicadorSiFueFacil +
-          ': un salto tan grande de golpe puede ser peligroso para un principiante');
+  /*
+   * La sección "progresion" ya no existe.
+   *
+   * La regla que cerró el socio no tiene números que ajustar: los objetivos salen del
+   * rango de repeticiones de cada ejercicio, y los kilos que se suben, del subirKg del
+   * equipo o del ejercicio. Si alguien vuelve a pegar acá los parámetros viejos, se lo
+   * decimos, porque no los va a leer nadie y se va a pensar que están haciendo algo.
+   */
+  if (reglas.progresion) {
+    const muertos = ['bajarPorcentaje', 'sesionesFallidasParaBajar', 'multiplicadorSiFueFacil',
+                     'saltoMaximoPorcentaje', 'subirPorcentaje'];
+    const presentes = muertos.filter((k) => reglas.progresion[k] !== undefined);
+    if (presentes.length) {
+      mal('reglas.json tiene la sección progresion con ' + presentes.join(', ') + ', que ya no se usan. ' +
+          'El deload automático y los botones de esfuerzo murieron con la regla vieja. Borrá la sección entera.');
+    } else {
+      ojo('reglas.json tiene una sección progresion vacía. Se puede borrar: la regla nueva no tiene números que ajustar.');
     }
   }
 
@@ -267,6 +254,7 @@ if (ejerciciosCrudos) {
       if (e.subBloque === undefined) contarPendiente('sub_bloque');
       if (e.nivel === undefined) contarPendiente('nivel');
       if (e.descansoSeg === undefined) contarPendiente('descanso_seg');
+      if (e.subirKg === undefined) contarPendiente('subir_kg');
       if (e.sustitutos === undefined) contarPendiente('sustitutos');
       if (e.musculosSecundarios === undefined) contarPendiente('musculos_secundarios');
       if (e.tecnica === undefined) contarPendiente('tecnica');
@@ -320,15 +308,40 @@ if (ejerciciosCrudos) {
         ojo(donde + ' tiene lastre o asistencia pero no está marcado como peso corporal. Revisalo.');
       }
 
-      // El peso inicial vive acá, así que acá se revisa que exista de verdad.
-      if (e.pesoInicialKg !== undefined) {
+      /*
+       * `subir_kg` del ejercicio: de a cuántos kilos sube ESTE ejercicio, pisando el del
+       * equipo. Existe porque el press militar progresa mucho más lento que la sentadilla
+       * aunque los dos usen barra.
+       *
+       * Lo que más importa revisar acá es que el número sea ARMABLE con el equipo. Un
+       * subir_kg de 1 kg en una barra que salta de a 2,5 no hace nada: el redondeo se lo
+       * come y el socio va a creer que está regulando algo que no se mueve. Es el mismo
+       * error que ya nos pasó con el porcentaje de subida.
+       */
+      if (e.subirKg !== undefined) {
         const eq = equipoDeCarga(e, reglas || { equipos: {} });
-        if (e.pesoInicialKg < 0) {
-          mal(donde + ' tiene un pesoInicialKg negativo');
-        } else if (eq && !e.admiteAsistencia) {
-          const r = cargaPosible(e.pesoInicialKg, eq);
-          if (!r.ok) mal(donde + ': el peso inicial ' + e.pesoInicialKg + ' kg ' + r.motivo);
+        if (e.subirKg <= 0) {
+          mal(donde + ' tiene subir_kg en ' + e.subirKg + '. Si querés que mande el equipo, dejá la celda vacía.');
+        } else if (eq && eq.incrementoMinimoKg > 0 && e.subirKg < eq.incrementoMinimoKg) {
+          mal(donde + ' tiene subir_kg de ' + e.subirKg + ' kg, pero ' + eq.nombre + ' salta de a ' +
+              eq.incrementoMinimoKg + ' kg como mínimo. El redondeo se lo come y el número no hace nada.');
+        } else if (eq && eq.incrementoMinimoKg > 0) {
+          const pasos = e.subirKg / eq.incrementoMinimoKg;
+          if (Math.abs(pasos - Math.round(pasos)) > 0.001) {
+            ojo(donde + ' tiene subir_kg de ' + e.subirKg + ' kg, que no es un múltiplo de los ' +
+                eq.incrementoMinimoKg + ' kg de ' + eq.nombre + ': el salto real va a ser el escalón más cercano');
+          }
         }
+      }
+
+      /*
+       * El peso inicial murió: el socio fue explícito en que la app NO recomienda con
+       * cuánto arrancar. El usuario prueba en el gimnasio y anota lo que usó. Si quedó una
+       * columna vieja en la planilla, avisamos, porque no la lee nadie.
+       */
+      if (crudo.peso_inicial_kg !== undefined && String(crudo.peso_inicial_kg).trim() !== '') {
+        ojo(donde + ' todavía tiene peso_inicial_kg cargado. La app ya no recomienda peso de arranque: ' +
+            'esa columna se ignora y se puede borrar de la planilla.');
       }
     });
 
@@ -475,20 +488,10 @@ if (rutinas) {
             mal(donde + ' tiene un descansoDespuesSeg inválido');
           }
 
-          // El peso inicial vive en ejercicios.json. Acá solo puede haber una excepción,
-          // y si la hay tiene que ser una carga que exista.
+          // La app ya no recomienda peso de arranque, así que una rutina tampoco lo pisa.
           if (ep.pesoInicialKg !== undefined && ep.pesoInicialKg !== null) {
-            const eq = ficha ? equipoDeCarga(ficha, reglas || { equipos: {} }) : null;
-            if (!esNumero(ep.pesoInicialKg) || ep.pesoInicialKg < 0) {
-              mal(donde + ' tiene un pesoInicialKg inválido');
-            } else if (eq && !(ficha && ficha.admiteAsistencia)) {
-              const res = cargaPosible(ep.pesoInicialKg, eq);
-              if (!res.ok) mal(donde + ': el peso inicial ' + ep.pesoInicialKg + ' kg ' + res.motivo);
-            }
-            if (ficha && ep.pesoInicialKg === ficha.pesoInicialKg) {
-              ojo(donde + ' repite el mismo pesoInicialKg que ya tiene el ejercicio. Sacalo de la rutina ' +
-                  'para que el valor viva en un solo lugar.');
-            }
+            ojo(donde + ' tiene pesoInicialKg. Ya no se usa: la app no recomienda peso de arranque, ' +
+                'el usuario anota el que haya usado. Se puede borrar.');
           }
         });
       });

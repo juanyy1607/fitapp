@@ -60,11 +60,15 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
   /** @type {EjercicioPlanificado[]} */
   let plan = [];
   let indice = 0;
-  /** @type {{pesoKg: number, reps: number}|null} */
+  /**
+   * Lo que está por confirmarse. `pesoKg` puede ser null: es la primera vez con este
+   * ejercicio y la app no recomienda peso, así que el campo arranca vacío y lo llena el
+   * usuario con lo que haya usado de verdad.
+   * @type {{pesoKg: number|null, reps: number}|null}
+   */
   let borrador = null;
   /** @type {'peso'|'reps'|null} */
   let editando = null;
-  let esperandoEsfuerzo = false;
   /** Índice de la serie que está esperando el segundo toque para borrarse. */
   let borrandoSerie = -1;
   /** @type {any} */
@@ -120,23 +124,59 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
   }
 
   /**
+   * El objetivo de repeticiones de UNA serie, contando desde 1.
+   *
+   * `null` quiere decir "al fallo": esa serie no tiene número, se hacen todas las que
+   * salgan. Es distinto de que no haya objetivo.
+   * @param {number} numeroSerie
+   * @returns {number|null}
+   */
+  function objetivoDeSerie(numeroSerie) {
+    const s = sugerenciaActual();
+    if (!s) return null;
+    const objetivo = s.objetivos[numeroSerie - 1];
+    return objetivo === undefined ? null : objetivo;
+  }
+
+  /**
    * Deja el peso y las repeticiones ya cargados, para que el usuario solo confirme.
-   * Primera serie: lo que sugiere la progresión. Siguientes: lo que acaba de hacer, que es
-   * el mejor pronóstico que hay y vuelve a las series 2 y 3 literalmente un toque.
+   *
+   * El peso: la primera serie del ejercicio trae lo que sugiere la progresión; las
+   * siguientes, lo que acaba de hacer, que es el mejor pronóstico que hay y vuelve a las
+   * series 2 y 3 literalmente un toque. La primera vez con un ejercicio no viene nada:
+   * queda en null y el campo se muestra vacío.
+   *
+   * Las repeticiones: el objetivo de ESTA serie, que ahora es propio de cada una. En la
+   * serie al fallo no hay número, así que proponemos lo de la serie anterior.
    */
   function prepararBorrador() {
     const hechas = seriesHechas();
-    if (hechas.length > 0) {
-      const ultima = hechas[hechas.length - 1];
-      borrador = { pesoKg: ultima.pesoKg, reps: ultima.reps };
-      return;
-    }
-    const s = sugerenciaActual();
     const p = planActual();
-    borrador = {
-      pesoKg: s && s.pesoKg !== null ? s.pesoKg : pisoDePeso(),
-      reps: s ? s.repsObjetivo : (p ? p.repsMin : 10)
-    };
+    const ultima = hechas[hechas.length - 1];
+    const objetivo = objetivoDeSerie(hechas.length + 1);
+
+    /** @type {number|null} */
+    let pesoKg;
+    if (ultima) {
+      pesoKg = ultima.pesoKg;
+    } else {
+      const s = sugerenciaActual();
+      pesoKg = s ? s.pesoKg : null;
+    }
+
+    /*
+     * En los ejercicios sin kilos —peso corporal, banda— la pantalla ni siquiera muestra
+     * el campo de peso, así que el usuario no tendría cómo llenarlo. Ahí "vacío" es cero,
+     * no "falta un dato": si no, el botón Listo quedaría deshabilitado para siempre.
+     */
+    const e = ejercicioActual();
+    if (pesoKg === null && e && (modoDeCarga(e) === 'peso-corporal' || pasoDePeso() === 0)) pesoKg = 0;
+
+    const reps = objetivo !== null ? objetivo
+      : ultima ? ultima.reps
+        : (p ? p.repsMin : 10);
+
+    borrador = { pesoKg, reps };
   }
 
   // ------------------------------------------------------------------ acciones
@@ -145,26 +185,47 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     const p = planActual();
     if (!sesion || !p || !borrador) return;
 
+    // Sin peso no se puede confirmar: es la primera vez y todavía no anotó con cuánto lo
+    // hizo. El botón está deshabilitado, pero esto también cubre el Enter del teclado.
+    if (borrador.pesoKg === null) return;
+
     const hechas = seriesHechas();
+    const numero = hechas.length + 1;
+
+    /*
+     * El objetivo se guarda junto con lo que hizo, y no se puede recalcular después.
+     *
+     * Es el dato que hace andar toda la regla de progresión: 7 repeticiones es un objetivo
+     * cumplido si le pedían 7, y uno fallado si le pedían 9. El número solo no lo dice.
+     */
     sesion.series.push({
       ejercicioId: p.ejercicioId,
-      numero: hechas.length + 1,
+      numero,
       pesoKg: borrador.pesoKg,
       reps: borrador.reps,
+      objetivo: objetivoDeSerie(numero),
       completadaTs: Date.now()
     });
     await guardar(sesion);
 
-    const eraLaUltima = hechas.length + 1 >= p.series;
+    const eraLaUltima = numero >= p.series;
 
     // El descanso arranca solo. Entre series es uno; al terminar el ejercicio es otro, más
     // largo, porque hay que cambiar de aparato y capaz esperar que se desocupe.
     temporizador.arrancar(eraLaUltima ? descansoDespuesDe(catalogo, p) : descansoDe(catalogo, p), dibujar);
     arrancarTick();
 
-    if (eraLaUltima) esperandoEsfuerzo = true;
-    else prepararBorrador();
+    /*
+     * Al terminar el ejercicio se pasa derecho al siguiente.
+     *
+     * Antes acá había una pantalla preguntando Fácil / Justo / No llegué. Murió con la
+     * regla nueva: el botón existía para detectar que alguien había arrancado demasiado
+     * liviano, y ahora eso se ve solo, porque hace el techo del rango de una y el peso
+     * sube. Registrar una serie volvió a ser un solo toque.
+     */
+    if (eraLaUltima) { avanzar(); return; }
 
+    prepararBorrador();
     editando = null;
     borrandoSerie = -1;
     dibujar();
@@ -186,20 +247,8 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
 
     await guardar(sesion);
     borrandoSerie = -1;
-    esperandoEsfuerzo = false;
     prepararBorrador();
     dibujar();
-  }
-
-  /** @param {'facil'|'justo'|'no-llegue'} valor */
-  async function responderEsfuerzo(valor) {
-    const p = planActual();
-    if (!sesion || !p) return;
-    const hechas = seriesHechas();
-    if (hechas.length) hechas[hechas.length - 1].esfuerzo = valor;
-    await guardar(sesion);
-    esperandoEsfuerzo = false;
-    avanzar();
   }
 
   function avanzar() {
@@ -236,7 +285,7 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
 
     const terminada = indice >= plan.length;
     contenedor.innerHTML =
-      (terminada ? dibujarFinal() : dibujarCabecera() + (esperandoEsfuerzo ? dibujarEsfuerzo() : dibujarEjercicio())) +
+      (terminada ? dibujarFinal() : dibujarCabecera() + dibujarEjercicio()) +
       dibujarDescanso();
 
     const entrada = contenedor.querySelector('.valor-entrada');
@@ -298,7 +347,16 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     const filasHechas = hechas.map((h) => `
       <div class="hecha">
         <span class="tilde">${icono('tilde', 14)}</span>
-        <span class="hecha-texto">Serie ${h.numero} · ${sinPeso ? '' : nro(h.pesoKg) + ' kg × '}${h.reps}</span>
+        <span class="hecha-texto">Serie ${h.numero} · ${sinPeso ? '' : nro(h.pesoKg) + ' kg × '}${h.reps}${
+          // Contra qué objetivo se hizo. Sin esto, la lista pierde justo el dato que la
+          // regla nueva hace importar: 7 repeticiones puede ser un objetivo cumplido o uno
+          // fallado, y el número solo no lo dice.
+          h.objetivo === null || h.objetivo === undefined
+            ? '<span class="hecha-meta"> · al fallo</span>'
+            : h.reps >= h.objetivo
+              ? '<span class="hecha-meta lograda"> · objetivo ' + h.objetivo + '</span>'
+              : '<span class="hecha-meta"> · objetivo ' + h.objetivo + '</span>'
+        }</span>
         <button type="button" class="hecha-borrar${borrandoSerie === h.numero ? ' confirmando' : ''}"
                 data-accion="borrar" data-numero="${h.numero}"
                 aria-label="${borrandoSerie === h.numero ? 'Tocá otra vez para borrar' : 'Borrar serie'}">
@@ -309,16 +367,25 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     // Regla 3: lo de la vez pasada, en la misma tarjeta.
     const ultimaVez = ultimoPorEjercicio(sesionesPrevias).get(p.ejercicioId);
 
+    const numeroSerie = hechas.length + 1;
+    const objetivo = objetivoDeSerie(numeroSerie);
+    const sinPesoTodavia = borrador.pesoKg === null;
+
     const bloquePeso = sinPeso ? '' : `
       <div class="valor-bloque">
         <button type="button" class="mas-menos grande" data-accion="paso" data-campo="peso" data-delta="-1"
-                ${borrador.pesoKg - paso < pisoDePeso() ? 'disabled' : ''} aria-label="Bajar peso">−</button>
+                ${sinPesoTodavia || borrador.pesoKg - paso < pisoDePeso() ? 'disabled' : ''} aria-label="Bajar peso">−</button>
         ${editando === 'peso'
-          ? `<input class="valor-entrada" type="number" inputmode="decimal" step="${paso}" value="${borrador.pesoKg}" data-campo="peso">`
-          : `<button type="button" class="peso-grande" data-accion="editar" data-campo="peso">${nro(borrador.pesoKg)}<span class="unidad">${unidad}</span></button>`}
+          ? `<input class="valor-entrada" type="number" inputmode="decimal" step="${paso}"
+                    value="${sinPesoTodavia ? '' : borrador.pesoKg}" placeholder="0" data-campo="peso">`
+          : `<button type="button" class="peso-grande${sinPesoTodavia ? ' vacio' : ''}" data-accion="editar" data-campo="peso">${
+              sinPesoTodavia ? '—' : nro(borrador.pesoKg)}<span class="unidad">${unidad}</span></button>`}
         <button type="button" class="mas-menos grande" data-accion="paso" data-campo="peso" data-delta="1"
                 aria-label="Subir peso">+</button>
       </div>
+      ${sinPesoTodavia
+        ? '<p class="nota-lado">Primera vez con este ejercicio: probá un peso y anotá el que hayas usado.</p>'
+        : ''}
       <div class="separador"></div>`;
 
     return `
@@ -326,8 +393,14 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
 
       <div class="tarjeta-serie">
         <div class="tarjeta-serie-cabecera">
-          <span class="etiqueta">Serie ${hechas.length + 1} de ${p.series}</span>
+          <span class="etiqueta">Serie ${numeroSerie} de ${p.series}</span>
           ${ultimaVez ? `<span class="etiqueta vez-pasada">La vez pasada · ${nro(ultimaVez.pesoKg)} kg × ${ultimaVez.reps}</span>` : ''}
+        </div>
+
+        <div class="objetivo-serie${objetivo === null ? ' al-fallo' : ''}">
+          ${objetivo === null
+            ? 'Última serie: <strong>al fallo</strong>. Hacé todas las que te salgan.'
+            : 'Objetivo de esta serie: <strong>' + objetivo + ' repeticiones</strong>'}
         </div>
 
         ${bloquePeso}
@@ -346,25 +419,8 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
       </div>
 
       <div class="zona-confirmar">
-        <button type="button" class="boton-principal" data-accion="confirmar">Listo</button>
-      </div>`;
-  }
-
-  function dibujarEsfuerzo() {
-    const e = ejercicioActual();
-    return `
-      <div class="tarjeta-serie">
-        <span class="etiqueta">Terminaste el ejercicio</span>
-        <h2 style="font-size:20px;font-weight:700;margin:6px 0 0">¿Cómo te fue con ${escapar(e ? e.nombre : '')}?</h2>
-        <p class="secundario">Una sola vez por ejercicio. Sirve para saber cuánto subir la próxima.</p>
-        <div class="esfuerzo-opciones">
-          <button type="button" data-accion="esfuerzo" data-valor="facil">Fácil
-            <span class="detalle">Podía hacer varias repeticiones más</span></button>
-          <button type="button" data-accion="esfuerzo" data-valor="justo">Justo
-            <span class="detalle">Llegué, pero al límite</span></button>
-          <button type="button" data-accion="esfuerzo" data-valor="no-llegue">No llegué
-            <span class="detalle">Me quedé corto</span></button>
-        </div>
+        <button type="button" class="boton-principal" data-accion="confirmar"
+                ${sinPeso || !sinPesoTodavia ? '' : 'disabled'}>Listo</button>
       </div>`;
   }
 
@@ -401,11 +457,23 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     const VUELTA = 2 * Math.PI * RADIO;
     const avance = Math.min(1, Math.max(0, seg / total));
 
+    /*
+     * Qué viene después del descanso.
+     *
+     * Al terminar un ejercicio ya se avanzó al siguiente, así que `planActual()` es el que
+     * viene y esto muestra su primera serie. Antes acá se bifurcaba porque en el medio
+     * aparecía la pantalla de esfuerzo; ahora no hay nada en el medio.
+     */
     const p = planActual();
-    const siguiente = esperandoEsfuerzo
-      ? (plan[indice + 1] ? (catalogo.ejercicioPorId.get(plan[indice + 1].ejercicioId) || {}).nombre : 'Terminar')
-      : (p && borrador ? 'Serie ' + (seriesHechas().length + 1) + ' de ' + p.series : '');
-    const valorSiguiente = !esperandoEsfuerzo && borrador ? nro(borrador.pesoKg) + ' kg × ' + borrador.reps : '';
+    const eSiguiente = ejercicioActual();
+    const siguiente = p
+      ? (eSiguiente ? eSiguiente.nombre + ' · ' : '') + 'Serie ' + (seriesHechas().length + 1) + ' de ' + p.series
+      : 'Terminar';
+
+    // Sin peso todavía (primera vez con el ejercicio) no hay nada que adelantar.
+    const valorSiguiente = borrador && borrador.pesoKg !== null
+      ? nro(borrador.pesoKg) + ' kg × ' + borrador.reps
+      : '';
 
     const problema = temporizador.problema();
 
@@ -453,7 +521,10 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     if (accion === 'paso' && borrador && (campo === 'peso' || campo === 'reps')) {
       const delta = Number(destino.dataset.delta) || 0;
       if (campo === 'peso') {
-        const nuevo = Math.round((borrador.pesoKg + delta * pasoDePeso()) * 100) / 100;
+        // Con el campo vacío (primera vez), el + arranca en el piso del equipo: la barra
+        // olímpica en 20, una máquina en 0. Es el primer número posible de verdad.
+        const desde = borrador.pesoKg === null ? pisoDePeso() - delta * pasoDePeso() : borrador.pesoKg;
+        const nuevo = Math.round((desde + delta * pasoDePeso()) * 100) / 100;
         borrador.pesoKg = Math.max(pisoDePeso(), nuevo);
       } else {
         borrador.reps = Math.max(1, borrador.reps + delta);
@@ -464,7 +535,6 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     if (accion === 'editar' && (campo === 'peso' || campo === 'reps')) { editando = campo; dibujar(); }
     if (accion === 'confirmar') confirmarSerie();
     if (accion === 'borrar') tocarBorrar(Number(destino.dataset.numero));
-    if (accion === 'esfuerzo') responderEsfuerzo(/** @type {any} */ (destino.dataset.valor));
     if (accion === 'terminar-sesion') terminarSesion();
     if (accion === 'ajustar') { temporizador.ajustar(Number(destino.dataset.delta) || 0); dibujar(); }
     if (accion === 'saltar-descanso') { temporizador.cancelar(); detenerTick(); dibujar(); }
@@ -510,7 +580,6 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
       });
       if (indice === -1) indice = plan.length;
 
-      esperandoEsfuerzo = false;
       editando = null;
       borrandoSerie = -1;
       if (indice < plan.length) prepararBorrador();
