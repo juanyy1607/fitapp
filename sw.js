@@ -18,7 +18,7 @@
  * sw.js cambió. Si solo tocás estilos.css, sw.js queda igual, el navegador no se entera
  * de nada, y seguís viendo lo viejo. Cambiar este número cambia el archivo.
  */
-var VERSION = 'v4';
+var VERSION = 'v5';
 var CACHE = 'fitapp-' + VERSION;
 
 /*
@@ -49,6 +49,7 @@ var ARCHIVOS = [
 
   './datos/reglas.json',
   './datos/ejercicios.json',
+  './datos/conceptos.json',
   './datos/rutinas.json',
 
   './logica/progresion.js',

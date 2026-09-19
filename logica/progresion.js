@@ -65,6 +65,32 @@ export function modoDeCarga(ejercicio) {
 }
 
 /**
+ * De qué equipo salen los escalones de peso de este ejercicio.
+ *
+ * No siempre es la columna `equipo` de la planilla, y esa es toda la razón de que esta
+ * función exista. El socio carga en `equipo` el aparato FÍSICO ("peso-corporal" para una
+ * dominada asistida, porque el aparato es la barra) y marca aparte la casilla
+ * `admite_asistencia`. Pero el número que el usuario anota en esa pantalla no son los
+ * kilos de la barra: son los kilos de AYUDA de la máquina, y esos suben de a 5, no de a 0.
+ *
+ * Si nos guiáramos por la columna sola, "peso-corporal" tiene incremento 0 y la pantalla
+ * le sacaría al usuario la posibilidad de anotar la ayuda. Entonces: manda el modo de
+ * carga, y la columna se usa solo cuando el modo es peso común.
+ *
+ * Devuelve `null` si no hay forma de saberlo, para que quien llame decida qué suponer.
+ * @param {Ejercicio} ejercicio
+ * @param {Reglas} reglas
+ * @returns {Equipo|null}
+ */
+export function equipoDeCarga(ejercicio, reglas) {
+  const equipos = reglas.equipos || {};
+  const modo = modoDeCarga(ejercicio);
+  if (modo === 'asistencia') return equipos['asistencia'] || null;
+  if (modo === 'lastre') return equipos['lastre'] || null;
+  return equipos[ejercicio.equipo] || null;
+}
+
+/**
  * Con cuánto arrancar la primera vez.
  *
  * El valor vive en el ejercicio, porque es propiedad del ejercicio y no de la rutina: si
@@ -201,12 +227,18 @@ export function sugerirCarga(historial, plan, ejercicio, reglas) {
   let advertencia;
   const modo = modoDeCarga(ejercicio);
 
-  let equipo = reglas.equipos[ejercicio.equipo];
+  let equipo = equipoDeCarga(ejercicio, reglas);
   if (!equipo) {
     // No reventamos en el medio del gimnasio por un dato mal cargado: suponemos saltos de
     // 1 kg y lo dejamos dicho. tools/validar-datos.mjs tendría que haberlo agarrado antes.
-    advertencia = 'El equipo "' + ejercicio.equipo + '" no está en reglas.json. Se supusieron saltos de 1 kg.';
-    equipo = { nombre: ejercicio.equipo, incrementoMinimoKg: 1, pesoBaseKg: 0, subirKg: 1 };
+    //
+    // Con la planilla real esto pasa de verdad: hay ejercicios que el socio todavía no
+    // clasificó y vienen con la columna `equipo` vacía. No es motivo para romper la
+    // pantalla; es motivo para avisar y seguir.
+    advertencia = ejercicio.equipo
+      ? 'El equipo "' + ejercicio.equipo + '" no está en reglas.json. Se supusieron saltos de 1 kg.'
+      : 'Este ejercicio todavía no tiene equipo cargado en la planilla. Se supusieron saltos de 1 kg.';
+    equipo = { nombre: ejercicio.equipo || 'sin definir', incrementoMinimoKg: 1, pesoBaseKg: 0, subirKg: 1 };
   }
 
   const incremento = equipo.incrementoMinimoKg || 0;

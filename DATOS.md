@@ -135,9 +135,12 @@ que se desocupe.
 | `id` | **sí** | Identificador estable. No se cambia nunca. |
 | `nombre` | **sí** | Cómo se muestra. |
 | `nombre_alternativo` | no | Cómo lo llaman en otros lados, para poder buscarlo. |
-| `equipo` | **sí** | Uno de los `equipo_id` de la pestaña `equipos`. |
+| `equipo` | no | Uno de los `equipo_id` de la pestaña `equipos`. Vacío se acepta, pero la app le supone saltos de 1 kg y el validador lo avisa. |
 | `grupo` | **sí** | Grupo muscular principal. **Lista cerrada**, ver abajo. |
+| `sub_bloque` | no | El pool de ejercicios equivalentes: todos los que sirven para lo mismo y se pueden cambiar uno por otro (`sentadillas`, `hip thrust`, `femoral`). **Todavía no se usa para nada**, ver abajo. |
 | `musculos_secundarios` | no | Lista separada por coma. **Lista cerrada**, ver abajo. Lo necesitan las reglas del armador. |
+| `descanso_seg` | no | Descanso entre series propio de este ejercicio. Si está vacío, manda el de la rutina, y si tampoco está, el de `reglas`. |
+| `video` | no | Link completo de YouTube. Se abre afuera; **no** se incrusta el reproductor. |
 | `nivel` | no | `principiante`, `intermedio` o `avanzado`. Lo necesita el armador. |
 | `es_unilateral` | no | `si` si se hace de a un lado. Define si el peso se registra una vez o por lado. |
 | `es_peso_corporal` | no | `si` si el cuerpo aporta la carga base. |
@@ -149,6 +152,19 @@ que se desocupe.
 | `errores_comunes` | no | Texto libre. |
 | `imagen` | no | Nombre de archivo o URL. |
 | `notas` | no | Texto libre. |
+
+> **Una celda vacía no es un error.** Las columnas marcadas "no" son las que el socio
+> completa cuando puede. Mientras estén vacías, la app usa su valor por defecto y el
+> validador las cuenta en un resumen al final de la corrida (`descanso_seg: 184 de 184`),
+> en vez de escupir un renglón de error por celda. Cientos de errores son lo mismo que
+> ninguno: nadie los lee y los problemas de verdad se pierden en el medio.
+
+**Cómo llega esto al código.** La planilla escribe `es_unilateral` con "si" o "no", las
+listas con comas adentro de una celda, y lo que falta como celda vacía. El código de
+adentro usa `esUnilateral` con verdadero o falso. La traducción pasa en **un solo lugar**,
+`logica/catalogo.js`, al cargar. Si el socio agrega una columna o le cambia el nombre, se
+toca ese archivo y nada más. El validador usa esa misma función, así que lo que revisa es
+exactamente lo que la app termina viendo.
 
 > **`peso_inicial_kg` va acá y no en la rutina.** Es propiedad del ejercicio: el press de
 > banca arranca en 20 kg independientemente de en qué rutina aparezca. Si estuviera en cada
@@ -170,6 +186,21 @@ registra el usuario:
 "kilos que agrego" y "kilos de ayuda" al mismo tiempo. Si hace falta cubrir las dos etapas,
 van dos ejercicios distintos (`dominadas-asistidas` y `dominadas`) unidos por `sustitutos`.
 El validador lo marca como error.
+
+### Pestaña `conceptos`
+
+Los videos que explican un concepto de entrenamiento suelto: qué es el RIR, qué es un
+drop set, qué es un EMOM. Salen a `datos/conceptos.json`. Hoy son 16.
+
+| Columna | Obligatoria | Qué es |
+|---|---|---|
+| `id` | **sí** | Identificador estable. |
+| `titulo` | **sí** | Cómo se muestra. |
+| `video` | no | Link completo de YouTube. |
+| `texto` | no | La explicación escrita. La escribe el socio; hoy están todos vacíos. |
+
+Se cargan y quedan disponibles en `catalogo.conceptos`. **Todavía no hay pantalla que los
+muestre.**
 
 ### Pestaña `rutinas`
 
@@ -260,6 +291,21 @@ puestos por defecto.
 5. **¿El salto doble cuando marca "Fácil" tiene que ser de 2, o prefiere otro número?**
    Es el `multiplicador_si_fue_facil`. Ver la sección de abajo.
 
+6. **El Multipower: ¿se cuenta el peso de la barra?** La planilla trae 17 ejercicios con
+   `equipo: maquina-guiada`, que no existía en la pestaña `equipos`. Lo agregamos con
+   saltos de 2,5 kg y **piso 0**, o sea que el usuario anota los discos que pone y la
+   barra no cuenta. Es lo más seguro por defecto, porque la barra del Multipower pesa
+   distinto en cada gimnasio y muchas están contrapesadas. Si el socio decide otra cosa,
+   se cambia un número en `reglas.json`.
+
+7. **Nueve ejercicios no tienen equipo cargado.** El validador los lista por nombre en
+   cada corrida. Mientras estén vacíos la app les supone saltos de 1 kg, que anda pero no
+   es el escalón real del aparato.
+
+8. **La planilla no tiene ningún ejercicio de `core`.** No hay plancha, ni abdominales, ni
+   nada del grupo. Puede ser a propósito o puede ser que falte cargarlo; hace falta
+   confirmarlo antes de armar rutinas de verdad.
+
 ---
 
 ## Los botones Fácil / Justo / No llegué
@@ -334,13 +380,34 @@ las opciones.
 
 **`grupo`** (uno solo por ejercicio):
 
-`pecho` · `espalda` · `piernas` · `hombros` · `brazos` · `core` · `glúteos` ·
-`pantorrillas` · `cuerpo-completo`
+`pecho` · `espalda` · `hombro` · `bíceps` · `tríceps` · `pierna` · `glúteos`
+
+Esta lista salió de la planilla del socio, no al revés. Antes decía `piernas`, `hombros` y
+un `brazos` que juntaba todo; el socio los carga en singular y separa bíceps de tríceps,
+que para repartir volumen es más útil. Si hace falta un grupo nuevo —`core`, por ejemplo,
+que hoy no existe en la planilla— se agrega a `GRUPOS` en `tools/validar-datos.mjs`.
 
 **`musculos_secundarios`** (varios, separados por coma). Además de todos los de arriba:
 
-`tríceps` · `bíceps` · `antebrazos` · `cuádriceps` · `isquiotibiales` · `dorsales` ·
+`core` · `antebrazos` · `cuádriceps` · `isquiotibiales` · `gemelos` · `dorsales` ·
 `trapecio` · `lumbares` · `abductores` · `aductores`
+
+---
+
+## Los `sub_bloque`: los pools de ejercicios equivalentes
+
+Un `sub_bloque` junta los ejercicios que sirven para lo mismo y se pueden cambiar uno por
+otro: todas las variantes de sentadilla en `sentadillas`, todas las de hip thrust en
+`hip thrust`. Hoy la planilla trae 25.
+
+**Todavía no se construyó nada con esto.** Se carga, se agrupa y se deja guardado, nada
+más. La app los tiene disponibles en `catalogo.porSubBloque` y hay una función
+`equivalentesDe()` que no llama nadie todavía. Es el dato que van a necesitar dos cosas
+que vienen después: el armador de rutinas, y el botón de "la máquina está ocupada, dame
+otro".
+
+Lo único que hace el validador con ellos es contarlos e informarlos, para que si un mismo
+sub-bloque quedó escrito de dos formas (`polea baja` y `polea-baja`) se vea de una.
 
 Si falta un valor que hace falta de verdad, se agrega a la lista a propósito. Lo que no se
 puede es inventarlo en una celda.

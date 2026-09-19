@@ -2,39 +2,39 @@
   {
     "id": "full-body-principiante",
     "nombre": "Full body para principiantes",
-    "descripcion": "Tres días por semana, todo el cuerpo en cada sesión. Datos de prueba: los define el socio.",
+    "descripcion": "Tres días por semana, todo el cuerpo en cada sesión. PROVISORIA: armada con ejercicios reales de la planilla para poder probar la app de punta a punta. La rutina de verdad la define el socio.",
     "dias": [
       {
         "id": "a",
         "nombre": "Día A",
         "ejercicios": [
           {
-            "ejercicioId": "sentadilla",
+            "ejercicioId": "sentadilla-barra-libre",
             "series": 3,
             "repsMin": 8,
             "repsMax": 12,
             "descansoSeg": 120
           },
           {
-            "ejercicioId": "press-banca",
+            "ejercicioId": "press-banca-plano-barra-libre",
             "series": 3,
             "repsMin": 8,
             "repsMax": 12,
             "descansoSeg": 120
           },
           {
-            "ejercicioId": "remo-barra",
+            "ejercicioId": "remo-barra-libre-prono",
             "series": 3,
             "repsMin": 8,
             "repsMax": 12,
             "descansoSeg": 90
           },
           {
-            "ejercicioId": "plancha",
+            "ejercicioId": "hip-thrust-barra-libre",
             "series": 3,
-            "repsMin": 20,
-            "repsMax": 45,
-            "descansoSeg": 60
+            "repsMin": 10,
+            "repsMax": 15,
+            "descansoSeg": 90
           }
         ]
       },
@@ -43,35 +43,35 @@
         "nombre": "Día B",
         "ejercicios": [
           {
-            "ejercicioId": "peso-muerto",
+            "ejercicioId": "peso-muerto-barra",
             "series": 3,
             "repsMin": 6,
             "repsMax": 10,
             "descansoSeg": 150
           },
           {
-            "ejercicioId": "press-militar",
+            "ejercicioId": "press-hombro-con-barra-libre-de-pie",
             "series": 3,
             "repsMin": 8,
             "repsMax": 12,
             "descansoSeg": 120
           },
           {
-            "ejercicioId": "jalon-al-pecho",
+            "ejercicioId": "polea-alta-jalon-al-pecho-barra",
             "series": 3,
             "repsMin": 10,
             "repsMax": 15,
             "descansoSeg": 90
           },
           {
-            "ejercicioId": "curl-mancuernas",
+            "ejercicioId": "biceps-alterno-2-db-de-pie-y-sentado",
             "series": 3,
             "repsMin": 10,
             "repsMax": 15,
             "descansoSeg": 60
           },
           {
-            "ejercicioId": "dominadas-asistidas",
+            "ejercicioId": "dominadas-asistidas-en-maquina",
             "series": 3,
             "repsMin": 6,
             "repsMax": 10,
@@ -84,28 +84,28 @@
         "nombre": "Día C",
         "ejercicios": [
           {
-            "ejercicioId": "prensa",
+            "ejercicioId": "prensa-horizontal",
             "series": 3,
             "repsMin": 10,
             "repsMax": 15,
             "descansoSeg": 120
           },
           {
-            "ejercicioId": "press-inclinado-mancuernas",
+            "ejercicioId": "press-pectoral-superior-2-db-banco",
             "series": 3,
             "repsMin": 8,
             "repsMax": 12,
             "descansoSeg": 90
           },
           {
-            "ejercicioId": "elevaciones-laterales",
+            "ejercicioId": "elevaciones-laterales-2db",
             "series": 3,
             "repsMin": 12,
             "repsMax": 20,
             "descansoSeg": 60
           },
           {
-            "ejercicioId": "triceps-polea",
+            "ejercicioId": "triceps-polea-alta-a-cadera-cuerda",
             "series": 3,
             "repsMin": 10,
             "repsMax": 15,

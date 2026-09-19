@@ -6,9 +6,12 @@
  *
  * Sin dependencias: el corredor de tests viene adentro de Node.
  *
- * Los tests usan el datos/reglas.json y el datos/ejercicios.json REALES, no copias
- * inventadas. Así, si el socio carga un número que rompe la progresión, los tests se
- * quejan antes de que llegue al teléfono de nadie.
+ * Los tests usan el datos/reglas.json REAL, no una copia inventada: si el socio carga un
+ * número que rompe la progresión, los tests se quejan antes de que llegue al teléfono de
+ * nadie.
+ *
+ * Los EJERCICIOS, en cambio, salen de un catálogo propio de los tests. Ver el comentario
+ * largo donde se carga.
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,8 +21,10 @@ import { fileURLToPath } from 'node:url';
 
 import {
   sugerirCarga, redondearACargaPosible, completoElRango, fallosSeguidos,
-  redondear2, modoDeCarga, pesoInicialDe, huboRetroceso, cabeElSaltoDoble
+  redondear2, modoDeCarga, pesoInicialDe, huboRetroceso, cabeElSaltoDoble,
+  equipoDeCarga
 } from './progresion.js';
+import { normalizarEjercicio } from './catalogo.js';
 
 /** @typedef {import('../tipos.js').Reglas} Reglas */
 /** @typedef {import('../tipos.js').Ejercicio} Ejercicio */
@@ -28,8 +33,30 @@ import {
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 /** @type {Reglas} */
 const reglas = JSON.parse(readFileSync(join(RAIZ, 'datos/reglas.json'), 'utf8'));
+
+/*
+ * Los tests usan su propio catálogo, no el del socio.
+ *
+ * Antes usaban datos/ejercicios.json, que en ese momento eran datos de prueba. Ahora ese
+ * archivo tiene los 184 ejercicios reales y lo maneja el socio: si los tests dependieran
+ * de él, renombrar un ejercicio en la planilla rompería la suite de progresión, que no
+ * tiene nada que ver. Peor todavía, alguien podría "arreglar" el test cambiando los datos
+ * del socio.
+ *
+ * El fixture está escrito en el MISMO formato que la planilla (columnas con guión bajo,
+ * casillas "si"/"no") y pasa por el mismo `normalizarEjercicio` que usa la app, así que
+ * los tests siguen cubriendo la traducción de verdad.
+ *
+ * El catálogo real igual se revisa, más abajo, en su propio bloque de tests.
+ */
 /** @type {Ejercicio[]} */
-const catalogo = JSON.parse(readFileSync(join(RAIZ, 'datos/ejercicios.json'), 'utf8'));
+const catalogo = JSON.parse(readFileSync(join(RAIZ, 'logica/ejercicios-de-prueba.json'), 'utf8'))
+  .map(normalizarEjercicio);
+
+/** El catálogo real del socio, ya traducido: lo que la app va a cargar de verdad. */
+/** @type {Ejercicio[]} */
+const catalogoReal = JSON.parse(readFileSync(join(RAIZ, 'datos/ejercicios.json'), 'utf8'))
+  .map(normalizarEjercicio);
 
 /** @param {string} id @returns {Ejercicio} */
 const ej = (id) => {
@@ -334,6 +361,79 @@ describe('sugerirCarga — datos mal cargados', () => {
       for (const s of e.sustitutos || []) {
         assert.ok(ids.has(s), 'el ejercicio "' + e.id + '" tiene como sustituto a "' + s + '", que no existe');
       }
+    }
+  });
+});
+
+// =====================================================================
+// El catálogo REAL del socio. Acá no se prueba la lógica: se prueba que los 184
+// ejercicios de la planilla puedan pasar por la progresión sin romper nada. Es lo que
+// separa "los tests pasan" de "la app funciona con los datos de verdad".
+// =====================================================================
+describe('el catálogo real de la planilla', () => {
+  test('hay ejercicios cargados y todos tienen id, nombre y grupo', () => {
+    assert.ok(catalogoReal.length > 0, 'datos/ejercicios.json está vacío');
+    for (const e of catalogoReal) {
+      assert.ok(e.id, 'hay un ejercicio sin id');
+      assert.ok(e.nombre, 'el ejercicio "' + e.id + '" no tiene nombre');
+      assert.ok(e.grupo, 'el ejercicio "' + e.id + '" no tiene grupo');
+    }
+  });
+
+  test('no hay ids repetidos', () => {
+    const vistos = new Set();
+    for (const e of catalogoReal) {
+      assert.ok(!vistos.has(e.id), 'el id "' + e.id + '" está repetido');
+      vistos.add(e.id);
+    }
+  });
+
+  test('todos los sustitutos apuntan a ejercicios que existen', () => {
+    const ids = new Set(catalogoReal.map((e) => e.id));
+    for (const e of catalogoReal) {
+      for (const s of e.sustitutos || []) {
+        assert.ok(ids.has(s), 'el ejercicio "' + e.id + '" tiene como sustituto a "' + s + '", que no existe');
+      }
+    }
+  });
+
+  test('los videos son links, no texto suelto', () => {
+    for (const e of catalogoReal) {
+      if (e.video === undefined) continue;
+      assert.match(e.video, /^https?:\/\//, 'el video de "' + e.id + '" no es un link: ' + e.video);
+    }
+  });
+
+  /*
+   * El caso que la planilla real destapó: el socio carga `equipo: peso-corporal` y marca
+   * la casilla `admite_asistencia`. Si la app mirara la columna sola, el escalón sería 0
+   * y la pantalla no dejaría anotar los kilos de ayuda de la máquina.
+   */
+  test('en los asistidos, el escalón sale del equipo de asistencia y no de la columna', () => {
+    const asistidos = catalogoReal.filter((e) => e.admiteAsistencia);
+    assert.ok(asistidos.length > 0, 'la planilla no tiene ningún ejercicio asistido: revisá el fixture');
+    for (const e of asistidos) {
+      const eq = equipoDeCarga(e, reglas);
+      assert.ok(eq, 'el asistido "' + e.id + '" se quedó sin equipo de carga');
+      assert.ok(eq.incrementoMinimoKg > 0,
+        'el asistido "' + e.id + '" tiene escalón 0: el usuario no podría anotar la ayuda');
+    }
+  });
+
+  test('ninguna ficha rompe la sugerencia de carga, ni sin historial ni con historial', () => {
+    /** @type {EjercicioPlanificado} */
+    const plan = { ejercicioId: 'x', series: 3, repsMin: 8, repsMax: 12, descansoSeg: 90 };
+    for (const e of catalogoReal) {
+      const primera = sugerirCarga([], { ...plan, ejercicioId: e.id }, e, reglas);
+      assert.ok(typeof primera.explicacion === 'string' && primera.explicacion.length > 0,
+        'el ejercicio "' + e.id + '" no produjo explicación en la primera vez');
+
+      const conHistorial = sugerirCarga(
+        [{ fechaTs: Date.now(), pesoKg: 20, reps: [12, 12, 12] }],
+        { ...plan, ejercicioId: e.id }, e, reglas
+      );
+      assert.ok(typeof conHistorial.pesoKg === 'number' && Number.isFinite(conHistorial.pesoKg),
+        'el ejercicio "' + e.id + '" devolvió un peso que no es un número');
     }
   });
 });

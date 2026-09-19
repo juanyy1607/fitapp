@@ -20,6 +20,7 @@ import {
   sesionCompleta, esRecord, semanaEntrenada
 } from './historial.js';
 import { sugerirCarga } from './progresion.js';
+import { normalizarEjercicio } from './catalogo.js';
 
 /** @typedef {import('../tipos.js').Sesion} Sesion */
 /** @typedef {import('../tipos.js').Reglas} Reglas */
@@ -28,10 +29,16 @@ import { sugerirCarga } from './progresion.js';
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 /** @type {Reglas} */
 const reglas = JSON.parse(readFileSync(join(RAIZ, 'datos/reglas.json'), 'utf8'));
+/*
+ * El catálogo de los tests, no el del socio. Ver el comentario largo en progresion.test.js:
+ * datos/ejercicios.json ahora tiene los 184 ejercicios reales y lo maneja el socio, así que
+ * los tests no pueden depender de que ahí exista un id en particular.
+ */
 /** @type {import('../tipos.js').Ejercicio[]} */
-const catalogo = JSON.parse(readFileSync(join(RAIZ, 'datos/ejercicios.json'), 'utf8'));
+const catalogo = JSON.parse(readFileSync(join(RAIZ, 'logica/ejercicios-de-prueba.json'), 'utf8'))
+  .map(normalizarEjercicio);
 const pressBanca = catalogo.find((e) => e.id === 'press-banca');
-if (!pressBanca) throw new Error('falta press-banca en datos/ejercicios.json');
+if (!pressBanca) throw new Error('falta press-banca en logica/ejercicios-de-prueba.json');
 
 const DIA = 24 * 60 * 60 * 1000;
 const HOY = Date.parse('2026-09-15T18:00:00Z');

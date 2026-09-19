@@ -38,7 +38,10 @@ const TRAZOS = {
          '<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
 
   // Flecha atrás.
-  atras: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>'
+  atras: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+
+  // Play adentro de un círculo. El link al video del ejercicio, que abre YouTube afuera.
+  play: '<circle cx="12" cy="12" r="9"/><path d="M10 8.5l6 3.5-6 3.5z"/>'
 };
 
 /**

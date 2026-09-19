@@ -23,7 +23,15 @@
  * @property {string} nombre        Cómo se muestra en pantalla.
  * @property {string} [nombreAlternativo]  Cómo lo llaman en otros lados, para buscarlo.
  * @property {string} equipo        Clave de `Reglas.equipos`. Define de a cuánto sube el peso.
+ *                                  Puede venir vacío: hay ejercicios que el socio todavía
+ *                                  no clasificó. La app supone saltos de 1 kg y avisa.
  * @property {string} grupo         Grupo muscular principal.
+ * @property {string} [subBloque]   El pool de ejercicios equivalentes al que pertenece:
+ *                                  todos los que sirven para lo mismo y se pueden cambiar
+ *                                  uno por otro ("sentadillas", "hip thrust", "femoral").
+ *                                  TODAVÍA NO SE USA. Se guarda porque lo van a necesitar
+ *                                  el armador de rutinas y el cambio de ejercicio cuando
+ *                                  la máquina está ocupada.
  * @property {string[]} [musculosSecundarios]  Lo va a necesitar el armador de rutinas.
  * @property {'principiante'|'intermedio'|'avanzado'} [nivel]
  * @property {boolean} [esUnilateral]     Si se hace de a un lado. Define si el peso se
@@ -34,10 +42,26 @@
  * @property {number|null} [pesoInicialKg] Con cuánto arrancar la primera vez. Vive acá
  *                                        porque es propiedad del ejercicio, no de la rutina.
  * @property {string[]} [sustitutos]      Qué hacer si la máquina está ocupada.
+ * @property {number} [descansoSeg]       Descanso entre series propio de este ejercicio.
+ *                                        Si falta, manda el de la rutina o el de reglas.json.
  * @property {string} [tecnica]
  * @property {string} [erroresComunes]
+ * @property {string} [video]             Link de YouTube con la demostración. Se abre en
+ *                                        el navegador; no se incrusta el reproductor.
  * @property {string} [imagen]
  * @property {string} [notas]
+ */
+
+/**
+ * Un concepto de entrenamiento explicado en video: qué es el RIR, qué es un drop set.
+ *
+ * Son las fichas de `datos/conceptos.json`. Por ahora traen título y video; el texto lo
+ * escribe el socio más adelante.
+ * @typedef {Object} Concepto
+ * @property {string} id
+ * @property {string} titulo
+ * @property {string} [video]   Link de YouTube.
+ * @property {string} [texto]   La explicación escrita, cuando exista.
  */
 
 /**

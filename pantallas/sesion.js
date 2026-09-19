@@ -25,7 +25,7 @@
  * puede obligarnos a rehacer.
  */
 
-import { sugerirCarga, modoDeCarga } from '../logica/progresion.js';
+import { sugerirCarga, modoDeCarga, equipoDeCarga } from '../logica/progresion.js';
 import { intentosDeEjercicio, sesionesTerminadas, ultimoPorEjercicio } from '../logica/historial.js';
 import { descansoDe, descansoDespuesDe } from '../logica/catalogo.js';
 import { icono } from '../iconos.js';
@@ -93,18 +93,29 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     return sugerirCarga(intentosDeEjercicio(sesionesPrevias, p.ejercicioId), p, e, catalogo.reglas);
   }
 
-  /** De a cuánto se mueve el ± del peso: lo que salta el equipo de verdad. */
+  /**
+   * De a cuánto se mueve el ± del peso: lo que salta el equipo de verdad.
+   *
+   * El equipo sale de `equipoDeCarga` y no de la columna `equipo` a secas, porque en los
+   * asistidos el número que se anota son los kilos de AYUDA de la máquina, no los de la
+   * barra. Ver el comentario largo de esa función en progresion.js.
+   *
+   * Si el ejercicio todavía no tiene equipo cargado en la planilla, saltos de 1 kg: la
+   * misma suposición que hace la progresión, para que la pantalla no se contradiga con
+   * la sugerencia que le acaba de mostrar al usuario.
+   */
   function pasoDePeso() {
     const e = ejercicioActual();
     if (!e) return 1;
-    const eq = catalogo.reglas.equipos[e.equipo];
-    return eq && eq.incrementoMinimoKg > 0 ? eq.incrementoMinimoKg : 0;
+    const eq = equipoDeCarga(e, catalogo.reglas);
+    if (!eq) return 1;
+    return eq.incrementoMinimoKg > 0 ? eq.incrementoMinimoKg : 0;
   }
 
   function pisoDePeso() {
     const e = ejercicioActual();
     if (!e) return 0;
-    const eq = catalogo.reglas.equipos[e.equipo];
+    const eq = equipoDeCarga(e, catalogo.reglas);
     return eq ? eq.pesoBaseKg : 0;
   }
 
@@ -232,6 +243,27 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
     if (entrada instanceof HTMLInputElement) { entrada.focus(); entrada.select(); }
   }
 
+  /**
+   * El link al video del ejercicio.
+   *
+   * Es un link que abre YouTube afuera, no un reproductor incrustado. A propósito, por
+   * tres razones: el reproductor de YouTube no funciona sin señal y la app se usa en el
+   * subsuelo de un gimnasio; incrustarlo carga scripts de Google en cada pantalla, que es
+   * justo lo que este proyecto no tiene; y al lado de una serie en curso un video que
+   * arranca solo es más molesto que útil.
+   *
+   * `rel="noopener"` va siempre con `target="_blank"`: sin eso, la página que se abre
+   * puede manipular la nuestra.
+   * @param {Ejercicio|null} e
+   * @returns {string}
+   */
+  function enlaceVideo(e) {
+    if (!e || !e.video) return '';
+    return `<a class="link-video" href="${escapar(e.video)}" target="_blank" rel="noopener">
+              ${icono('play', 16)}<span>Ver el video</span>
+            </a>`;
+  }
+
   function dibujarCabecera() {
     const e = ejercicioActual();
     const segmentos = plan.map((_, i) => {
@@ -244,6 +276,7 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
         <div>
           <span class="etiqueta">Ejercicio ${indice + 1} de ${plan.length}</span>
           <h1 class="sesion-nombre">${escapar(e ? e.nombre : '')}</h1>
+          ${enlaceVideo(e)}
         </div>
         <button type="button" class="sesion-salir" data-accion="terminar-sesion"
                 aria-label="Terminar entrenamiento">${icono('cruz', 22)}</button>

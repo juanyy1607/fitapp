@@ -40,6 +40,13 @@
       "pesoBaseKg": 0,
       "subirKg": 5
     },
+    "maquina-guiada": {
+      "nombre": "Multipower (barra guiada)",
+      "incrementoMinimoKg": 2.5,
+      "pesoBaseKg": 0,
+      "subirKg": 2.5,
+      "nota": "PENDIENTE DE CONFIRMAR CON EL SOCIO. Lo usan 17 ejercicios de la planilla y no estaba definido acá. pesoBaseKg quedó en 0 porque la barra del Multipower pesa distinto en cada gimnasio y muchas están contrapesadas: el usuario anota los discos que pone. Si el socio decide que se cuente la barra, se cambia este número y nada más."
+    },
     "polea": {
       "nombre": "Polea",
       "incrementoMinimoKg": 2.5,

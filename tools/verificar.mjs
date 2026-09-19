@@ -366,7 +366,7 @@ servidor.listen(0, '127.0.0.1', async () => {
 
   // Todo archivo servible que no esté en la lista no va a estar disponible sin señal.
   const enDisco = ['index.html', 'estilos.css', 'app.js', 'manifest.webmanifest', 'tipos.js',
-    'datos/reglas.json', 'datos/ejercicios.json', 'datos/rutinas.json',
+    'datos/reglas.json', 'datos/ejercicios.json', 'datos/conceptos.json', 'datos/rutinas.json',
     'logica/progresion.js', 'logica/historial.js', 'logica/almacen.js',
     'logica/catalogo.js', 'logica/respaldo.js', 'logica/temporizador.js',
     'iconos.js', 'pantallas/sesion.js'];

@@ -43,7 +43,9 @@ describe('todos los módulos cargan y exportan lo que dicen', () => {
 
   test('catalogo.js (se importa, no se ejecuta: necesita fetch)', async () => {
     const m = await import('./catalogo.js');
-    for (const nombre of ['cargarCatalogo', 'nombreDeEjercicio', 'equipoDeEjercicio', 'buscarDia', 'descansoDe', 'descansoDespuesDe']) {
+    for (const nombre of ['cargarCatalogo', 'normalizarEjercicio', 'normalizarConcepto',
+                          'nombreDeEjercicio', 'equipoDeEjercicio', 'equivalentesDe',
+                          'buscarDia', 'descansoDe', 'descansoDespuesDe']) {
       assert.equal(typeof m[nombre], 'function', 'falta exportar ' + nombre);
     }
   });

@@ -17,6 +17,17 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/*
+ * Se traduce la planilla con LA MISMA función que usa la app, no con una copia de las
+ * reglas acá adentro.
+ *
+ * Es a propósito. Si el validador tradujera por su cuenta, podría dar todo bien sobre una
+ * versión de los datos que la app nunca ve, y el error aparecería igual en el gimnasio.
+ * Importando la función de verdad, lo que se valida es exactamente lo que la app carga.
+ */
+import { normalizarEjercicio, normalizarConcepto } from '../logica/catalogo.js';
+import { equipoDeCarga } from '../logica/progresion.js';
+
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 let fallas = 0;
@@ -50,14 +61,18 @@ const NIVELES = ['principiante', 'intermedio', 'avanzado'];
  * una fila dice "pecho" y otra "Pectoral", para la app son dos grupos distintos y el
  * armador reparte mal el volumen sin que nadie vea un error. Si hace falta un valor nuevo,
  * se agrega acá a propósito, no escribiéndolo distinto en una celda.
+ *
+ * Esta lista es la que usa la planilla real del socio. Antes decía "piernas", "hombros" y
+ * "brazos" en plural y en conjunto; el socio los carga en singular y separa bíceps de
+ * tríceps, que para repartir volumen es más útil. Manda la planilla.
  */
 const GRUPOS = [
-  'pecho', 'espalda', 'piernas', 'hombros', 'brazos', 'core',
-  'glúteos', 'pantorrillas', 'cuerpo-completo'
+  'pecho', 'espalda', 'hombro', 'bíceps', 'tríceps',
+  'pierna', 'glúteos'
 ];
 
 const MUSCULOS = GRUPOS.concat([
-  'tríceps', 'bíceps', 'antebrazos', 'cuádriceps', 'isquiotibiales',
+  'core', 'antebrazos', 'cuádriceps', 'isquiotibiales', 'gemelos',
   'dorsales', 'trapecio', 'lumbares', 'abductores', 'aductores'
 ]);
 
@@ -180,22 +195,39 @@ if (reglas) {
 
 titulo('ejercicios.json');
 
-const ejercicios = leerJson('datos/ejercicios.json');
+const ejerciciosCrudos = leerJson('datos/ejercicios.json');
+/** Las fichas ya traducidas: exactamente lo que va a ver la app. */
+let ejercicios = [];
 const idsEjercicio = new Set();
 const fallasAntesDeEjercicios = fallas;
 
-if (ejercicios) {
-  if (!Array.isArray(ejercicios)) {
+if (ejerciciosCrudos) {
+  if (!Array.isArray(ejerciciosCrudos)) {
     mal('ejercicios.json tiene que ser una lista, o sea empezar con [ y terminar con ]');
   } else {
+    ejercicios = ejerciciosCrudos.map(normalizarEjercicio);
+
     // Primera pasada: los ids, para poder validar sustitutos después.
     for (const e of ejercicios) if (esTexto(e.id)) idsEjercicio.add(e.id);
 
+    /** Cuántas fichas dejaron vacío cada campo pendiente. Se informa junto al final. */
+    const pendientes = {};
+    const contarPendiente = (campo) => { pendientes[campo] = (pendientes[campo] || 0) + 1; };
+    const sinEquipo = [];
+
     ejercicios.forEach((e, i) => {
+      const crudo = ejerciciosCrudos[i] || {};
       const donde = 'ejercicio ' + (i + 1) + (esTexto(e.id) ? ' ("' + e.id + '")' : '');
 
+      // --- Lo que SÍ es obligatorio. Sin esto la app no puede mostrar la ficha.
       if (!esTexto(e.id)) mal(donde + ' no tiene id');
       if (!esTexto(e.nombre)) mal(donde + ' no tiene nombre');
+
+      const repetidos = ejercicios.filter((x) => x.id === e.id);
+      if (esTexto(e.id) && repetidos.length > 1 && repetidos[0] !== e) {
+        mal(donde + ' tiene un id repetido: cada ejercicio necesita uno propio');
+      }
+
       if (!esTexto(e.grupo)) {
         mal(donde + ' no tiene grupo muscular');
       } else if (!GRUPOS.includes(e.grupo)) {
@@ -204,50 +236,79 @@ if (ejercicios) {
             '(Escribir el mismo grupo de dos formas distintas hace que el armador reparta mal el volumen.)');
       }
 
-      const repetidos = ejercicios.filter((x) => x.id === e.id);
-      if (esTexto(e.id) && repetidos.length > 1 && repetidos[0] !== e) {
-        mal(donde + ' tiene un id repetido: cada ejercicio necesita uno propio');
+      /*
+       * Las casillas: en la planilla se escriben "si" o "no". Cualquier otra cosa es un
+       * error de tipeo que hay que ver, porque silenciosamente cuenta como "no".
+       * Vacío sí se acepta: quiere decir que no aplica.
+       */
+      for (const col of ['es_unilateral', 'es_peso_corporal', 'admite_lastre', 'admite_asistencia']) {
+        const v = crudo[col];
+        if (v === undefined || v === '' || typeof v === 'boolean') continue;
+        const n = String(v).trim().toLowerCase();
+        if (n !== '' && !['si', 'sí', 'no', 'x', 'true', 'false', '1', '0'].includes(n)) {
+          mal(donde + ': la casilla ' + col + ' dice "' + v + '". Tiene que decir "si" o "no". ' +
+              'Cualquier otra cosa cuenta como "no" sin avisar.');
+        }
       }
 
-      let eq = null;
+      /*
+       * El equipo puede estar vacío: hay ejercicios que el socio todavía no clasificó.
+       * No es un error, pero sí algo que tiene que ver, porque la app va a suponer saltos
+       * de 1 kg hasta que lo complete.
+       */
       if (!esTexto(e.equipo)) {
-        mal(donde + ' no tiene equipo');
+        sinEquipo.push(e.id);
       } else if (reglas && reglas.equipos && !reglas.equipos[e.equipo]) {
         mal(donde + ' usa el equipo "' + e.equipo + '", que no existe en reglas.json. ' +
             'Los que existen son: ' + Object.keys(reglas.equipos).join(', '));
-      } else if (reglas && reglas.equipos) {
-        eq = reglas.equipos[e.equipo];
       }
 
+      // --- Campos que el socio completa después. Vacío NO es un error: es "todavía no".
+      if (e.subBloque === undefined) contarPendiente('sub_bloque');
+      if (e.nivel === undefined) contarPendiente('nivel');
+      if (e.descansoSeg === undefined) contarPendiente('descanso_seg');
+      if (e.sustitutos === undefined) contarPendiente('sustitutos');
+      if (e.musculosSecundarios === undefined) contarPendiente('musculos_secundarios');
+      if (e.tecnica === undefined) contarPendiente('tecnica');
+      if (e.erroresComunes === undefined) contarPendiente('errores_comunes');
+      if (e.video === undefined) contarPendiente('video');
+
+      // --- Y lo que está cargado, tiene que estar bien cargado.
       if (e.nivel !== undefined && !NIVELES.includes(e.nivel)) {
         mal(donde + ' tiene nivel "' + e.nivel + '". Tiene que ser uno de: ' + NIVELES.join(', '));
       }
 
       if (e.musculosSecundarios !== undefined) {
-        if (!esLista(e.musculosSecundarios)) {
-          mal(donde + ': musculosSecundarios tiene que ser una lista (en la planilla, separados por coma)');
-        } else {
-          for (const m of e.musculosSecundarios) {
-            if (!MUSCULOS.includes(m)) {
-              mal(donde + ' tiene el músculo secundario "' + m + '", que no está en la lista. ' +
-                  'Los válidos son: ' + MUSCULOS.join(', '));
-            }
+        for (const m of e.musculosSecundarios) {
+          if (!MUSCULOS.includes(m)) {
+            mal(donde + ' tiene el músculo secundario "' + m + '", que no está en la lista. ' +
+                'Los válidos son: ' + MUSCULOS.join(', '));
           }
-          if (e.musculosSecundarios.includes(e.grupo)) {
-            ojo(donde + ' repite "' + e.grupo + '" como músculo secundario, y ya es su grupo principal');
-          }
+        }
+        if (e.musculosSecundarios.includes(e.grupo)) {
+          ojo(donde + ' repite "' + e.grupo + '" como músculo secundario, y ya es su grupo principal');
         }
       }
 
       if (e.sustitutos !== undefined) {
-        if (!esLista(e.sustitutos)) {
-          mal(donde + ': sustitutos tiene que ser una lista');
-        } else {
-          for (const s of e.sustitutos) {
-            if (!idsEjercicio.has(s)) mal(donde + ' tiene como sustituto a "' + s + '", que no existe en la planilla');
-            if (s === e.id) mal(donde + ' se tiene a sí mismo como sustituto');
-          }
+        for (const s of e.sustitutos) {
+          if (!idsEjercicio.has(s)) mal(donde + ' tiene como sustituto a "' + s + '", que no existe en la planilla');
+          if (s === e.id) mal(donde + ' se tiene a sí mismo como sustituto');
         }
+      }
+
+      if (e.descansoSeg !== undefined && (e.descansoSeg <= 0 || e.descansoSeg > 600)) {
+        mal(donde + ' tiene un descanso de ' + e.descansoSeg + ' s: tiene que ser un número entre 1 y 600');
+      }
+
+      /*
+       * El video se abre en YouTube, afuera de la app. Por eso tiene que ser un link
+       * http(s) de verdad: si alguien pega el título del video o un id suelto, la app
+       * abriría una pestaña rota en el gimnasio.
+       */
+      if (e.video !== undefined && !/^https?:\/\//i.test(e.video)) {
+        mal(donde + ' tiene un video que no es un link: "' + e.video + '". ' +
+            'Tiene que empezar con https:// (pegá la dirección completa de YouTube).');
       }
 
       // Un solo número no puede significar "kilos agregados" y "kilos de ayuda" a la vez.
@@ -260,9 +321,10 @@ if (ejercicios) {
       }
 
       // El peso inicial vive acá, así que acá se revisa que exista de verdad.
-      if (e.pesoInicialKg !== null && e.pesoInicialKg !== undefined) {
-        if (!esNumero(e.pesoInicialKg) || e.pesoInicialKg < 0) {
-          mal(donde + ' tiene un pesoInicialKg inválido (un número, o vacío si lo elige el usuario)');
+      if (e.pesoInicialKg !== undefined) {
+        const eq = equipoDeCarga(e, reglas || { equipos: {} });
+        if (e.pesoInicialKg < 0) {
+          mal(donde + ' tiene un pesoInicialKg negativo');
         } else if (eq && !e.admiteAsistencia) {
           const r = cargaPosible(e.pesoInicialKg, eq);
           if (!r.ok) mal(donde + ': el peso inicial ' + e.pesoInicialKg + ' kg ' + r.motivo);
@@ -270,9 +332,83 @@ if (ejercicios) {
       }
     });
 
-    if (fallas === fallasAntesDeEjercicios) bien(idsEjercicio.size + ' ejercicios, todos con id propio');
+    /*
+     * Los sub-bloques son los pools de ejercicios equivalentes. Todavía no se usan para
+     * nada, así que acá no se valida nada de ellos: solo se listan, para que el socio vea
+     * cómo quedaron agrupados y pueda corregir un nombre escrito de dos formas.
+     */
+    const porSubBloque = new Map();
+    for (const e of ejercicios) {
+      if (!e.subBloque) continue;
+      porSubBloque.set(e.subBloque, (porSubBloque.get(e.subBloque) || 0) + 1);
+    }
+
+    if (fallas === fallasAntesDeEjercicios) {
+      bien(idsEjercicio.size + ' ejercicios, todos con id propio');
+      bien(porSubBloque.size + ' sub-bloques (pools de ejercicios equivalentes, todavía sin usar)');
+    }
+
+    if (sinEquipo.length) {
+      ojo(sinEquipo.length + ' ejercicio(s) sin equipo cargado. La app les va a suponer saltos de 1 kg ' +
+          'hasta que se complete la columna: ' + sinEquipo.join(', '));
+    }
+
+    /*
+     * Los campos que el socio completa después se cuentan y se informan juntos, una sola
+     * vez. Antes cada celda vacía era un error y la corrida escupía cientos de renglones,
+     * que es lo mismo que no decir nada: nadie los lee y se pierden los errores de verdad.
+     */
+    const listaPendientes = Object.keys(pendientes).sort();
+    if (listaPendientes.length) {
+      ojo('Campos que faltan completar (no es un error, los carga el socio después):');
+      for (const campo of listaPendientes) {
+        console.log('          ' + campo.padEnd(22) + pendientes[campo] + ' de ' + ejercicios.length + ' ejercicios');
+      }
+    }
   }
 }
+
+// ========================================================== conceptos.json
+
+titulo('conceptos.json');
+
+const conceptosCrudos = leerJson('datos/conceptos.json');
+const fallasAntesDeConceptos = fallas;
+
+if (conceptosCrudos) {
+  if (!Array.isArray(conceptosCrudos)) {
+    mal('conceptos.json tiene que ser una lista');
+  } else {
+    const conceptos = conceptosCrudos.map(normalizarConcepto);
+    const idsConcepto = new Set();
+    let sinTexto = 0;
+
+    conceptos.forEach((c, i) => {
+      const donde = 'concepto ' + (i + 1) + (esTexto(c.id) ? ' ("' + c.id + '")' : '');
+
+      if (!esTexto(c.id)) mal(donde + ' no tiene id');
+      else if (idsConcepto.has(c.id)) mal(donde + ' tiene un id repetido');
+      else idsConcepto.add(c.id);
+
+      if (!esTexto(c.titulo)) mal(donde + ' no tiene título');
+
+      if (c.video !== undefined && !/^https?:\/\//i.test(c.video)) {
+        mal(donde + ' tiene un video que no es un link: "' + c.video + '"');
+      }
+      if (c.video === undefined) ojo(donde + ' no tiene video ni texto para mostrar');
+
+      // El texto explicativo lo escribe el socio. Vacío es lo esperado por ahora.
+      if (c.texto === undefined) sinTexto++;
+    });
+
+    if (fallas === fallasAntesDeConceptos) bien(idsConcepto.size + ' conceptos, todos con id propio');
+    if (sinTexto) {
+      ojo(sinTexto + ' de ' + conceptos.length + ' conceptos están solo con el video, sin texto escrito ' +
+          '(no es un error: el texto lo escribe el socio)');
+    }
+  }
+}
+
 
 // ============================================================ rutinas.json
 
@@ -313,7 +449,7 @@ if (rutinas) {
                         (esTexto(ep.ejercicioId) ? ' ("' + ep.ejercicioId + '")' : '');
           totalEjercicios++;
 
-          const ficha = Array.isArray(ejercicios) ? ejercicios.find((x) => x.id === ep.ejercicioId) : null;
+          const ficha = ejercicios.find((x) => x.id === ep.ejercicioId) || null;
 
           if (!esTexto(ep.ejercicioId)) mal(donde + ' no dice a qué ejercicio apunta');
           else if (idsEjercicio.size && !ficha) mal(donde + ' apunta a un ejercicio que no está en ejercicios.json');
@@ -342,7 +478,7 @@ if (rutinas) {
           // El peso inicial vive en ejercicios.json. Acá solo puede haber una excepción,
           // y si la hay tiene que ser una carga que exista.
           if (ep.pesoInicialKg !== undefined && ep.pesoInicialKg !== null) {
-            const eq = ficha && reglas && reglas.equipos ? reglas.equipos[ficha.equipo] : null;
+            const eq = ficha ? equipoDeCarga(ficha, reglas || { equipos: {} }) : null;
             if (!esNumero(ep.pesoInicialKg) || ep.pesoInicialKg < 0) {
               mal(donde + ' tiene un pesoInicialKg inválido');
             } else if (eq && !(ficha && ficha.admiteAsistencia)) {
