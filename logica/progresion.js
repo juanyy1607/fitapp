@@ -25,6 +25,11 @@
  *
  *   e) El peso NUNCA baja solo.
  *
+ *   f) En los ejercicios donde NO hay carga que sumar, el techo del rango no aplica: los
+ *      objetivos siguen subiendo de a uno, sin límite. Si el ejercicio admite lastre, en
+ *      cambio, el techo sí aplica y el ciclo se reinicia agregando disco. Ver
+ *      `elTechoAplica`, que es donde se decide.
+ *
  * Así se ve una progresión normal con rango 6-10 y tres series:
  *
  *      objetivos          lo que hizo
@@ -155,6 +160,31 @@ export function objetivosIniciales(plan) {
 }
 
 /**
+ * ¿El techo del rango aplica en este ejercicio?
+ *
+ * El techo tiene sentido cuando hay una carga que sumar: llegás arriba del rango, sumás
+ * kilos y volvés al piso. Pero hay ejercicios donde no hay ningún kilo que sumar —una
+ * flexión, una plancha, una dominada sin posibilidad de lastre, cualquier cosa con banda
+ * elástica— y ahí el techo deja de ser una meta y pasa a ser una pared.
+ *
+ * El número es concreto: un principiante llega al techo del rango en unas cuatro semanas.
+ * Si en ese momento la app le congela los objetivos, le está diciendo que ya no progresa
+ * más nunca en ese ejercicio. Eso no es una regla de entrenamiento, es un bug.
+ *
+ * Entonces: si no hay carga que sumar, la progresión es la repetición, y no tiene tope.
+ *
+ * Ojo con los que SÍ admiten lastre: esos no entran acá. Una dominada con `admite_lastre`
+ * tiene modo de carga `lastre`, que sube de a 1,25 kg, así que para ellos el techo sí
+ * aplica y el ciclo se reinicia agregando disco.
+ * @param {Ejercicio} ejercicio
+ * @param {Equipo} equipo
+ * @returns {boolean}
+ */
+export function elTechoAplica(ejercicio, equipo) {
+  return (equipo.incrementoMinimoKg || 0) > 0 && saltoDe(ejercicio, equipo) > 0;
+}
+
+/**
  * ¿Todas las series llegaron al techo del rango?
  *
  * Es la condición que dispara la subida de peso. Exige DOS cosas: que haya hecho todas las
@@ -185,9 +215,13 @@ export function todasAlTecho(reps, plan) {
  * @param {(number|null)[]} objetivos  Los que tenía la sesión que se acaba de hacer.
  * @param {number[]} reps              Lo que hizo en cada serie, en el mismo orden.
  * @param {EjercicioPlanificado} plan
+ * @param {boolean} [conTecho]         Si el techo del rango frena a los objetivos. Es
+ *                                     false en los ejercicios donde no hay carga que
+ *                                     sumar: ahí la repetición es la única progresión que
+ *                                     existe y no puede tener tope. Ver `elTechoAplica`.
  * @returns {(number|null)[]}
  */
-export function avanzarObjetivos(objetivos, reps, plan) {
+export function avanzarObjetivos(objetivos, reps, plan, conTecho = true) {
   return objetivos.map((objetivo, i) => {
     // La serie al fallo no tiene número, así que no hay nada que subir: sigue al fallo
     // hasta que todas lleguen al techo y se reinicie con el peso nuevo.
@@ -197,8 +231,8 @@ export function avanzarObjetivos(objetivos, reps, plan) {
     // Serie que no se registró (abandonó la sesión, o borró la serie): no se toca.
     if (typeof hechas !== 'number' || !Number.isFinite(hechas)) return objetivo;
 
-    if (hechas >= objetivo) return Math.min(objetivo + 1, plan.repsMax);
-    return objetivo;
+    if (hechas < objetivo) return objetivo;
+    return conTecho ? Math.min(objetivo + 1, plan.repsMax) : objetivo + 1;
   });
 }
 
@@ -264,6 +298,7 @@ export function sugerirCarga(historial, plan, ejercicio, reglas) {
 
   const incremento = equipo.incrementoMinimoKg || 0;
   const salto = saltoDe(ejercicio, equipo);
+  const conTecho = elTechoAplica(ejercicio, equipo);
 
   // En los asistidos el progreso va para abajo: menos ayuda es mejor. Este signo es lo
   // único que separa "te está yendo bien" de "ponete más ayuda".
@@ -301,22 +336,54 @@ export function sugerirCarga(historial, plan, ejercicio, reglas) {
     ? ultimo.objetivos
     : iniciales;
 
+  /*
+   * --- Ejercicios sin ninguna carga que sumar: el techo del rango no aplica.
+   *
+   * Flexiones, plancha, una dominada que no admite lastre, cualquier cosa con banda. Acá
+   * no hay kilos, así que la única progresión posible es la repetición, y frenarla en el
+   * techo sería congelar el ejercicio para siempre a las cuatro semanas.
+   *
+   * Los objetivos siguen subiendo de a uno por serie, sin límite. Ni siquiera miramos
+   * `todasAlTecho`: en estos ejercicios el techo no significa nada.
+   */
+  if (!conTecho) {
+    const objetivos = avanzarObjetivos(objetivosPrevios, ultimo.reps, plan, false);
+    const avanzoAlguna = objetivos.some((o, i) => o !== null && o !== objetivosPrevios[i]);
+    return {
+      pesoKg: ultimo.pesoKg,
+      objetivos,
+      motivo: 'seguir',
+      modo,
+      explicacion: 'Acá no hay kilos para sumar, así que la progresión son las repeticiones ' +
+                   'y no tienen tope. ' +
+                   (avanzoAlguna
+                     ? 'Los objetivos de hoy son ' + describirObjetivos(objetivos) + '.'
+                     : 'Los objetivos siguen en ' + describirObjetivos(objetivos) + '.'),
+      advertencia
+    };
+  }
+
   // --- Todas las series al techo: le toca subir el peso y volver a empezar el ciclo.
   if (todasAlTecho(ultimo.reps, plan)) {
     /*
-     * Salvo que no haya kilos que mover. Pasa en dos casos reales de la planilla: peso
-     * corporal puro (flexiones) y banda elástica, que no se mide en kilos. Ahí el usuario
-     * ya está en el techo del rango y la app no tiene nada más para ofrecerle: se lo
-     * decimos en vez de mandarlo a repetir el ciclo para nada.
+     * Estrena lastre: venía a peso corporal puro y llegó al techo del rango.
+     *
+     * La app dice que agregue lastre pero NO elige cuántos kilos, igual que la primera vez
+     * con cualquier ejercicio: depende de qué discos haya, de si el cinturón existe, y de
+     * la persona. `pesoKg` en null hace que la pantalla muestre el campo vacío.
+     *
+     * De ahí en adelante ya es una progresión con carga como cualquier otra, y sube sola
+     * de a un escalón de lastre.
      */
-    if (incremento <= 0 || salto <= 0) {
+    if (modo === 'lastre' && ultimo.pesoKg <= 0) {
       return {
-        pesoKg: ultimo.pesoKg,
-        objetivos: objetivosPrevios.map((o) => (o === null ? null : plan.repsMax)),
-        motivo: 'tope',
+        pesoKg: null,
+        objetivos: iniciales,
+        motivo: 'agregar-lastre',
         modo,
-        explicacion: 'Llegaste a ' + plan.repsMax + ' repeticiones en todas las series. ' +
-                     'Acá no hay kilos para sumar, así que sostené ese número.',
+        explicacion: 'Llegaste a ' + plan.repsMax + ' repeticiones en todas las series con tu propio ' +
+                     'peso. Agregá lastre —un disco o un cinturón— y anotá cuántos kilos pusiste. ' +
+                     'Los objetivos vuelven a ' + describirObjetivos(iniciales) + '.',
         advertencia
       };
     }
@@ -359,7 +426,7 @@ export function sugerirCarga(historial, plan, ejercicio, reglas) {
   }
 
   // --- Caso normal: el mismo peso, y cada serie avanza por su cuenta.
-  const objetivos = avanzarObjetivos(objetivosPrevios, ultimo.reps, plan);
+  const objetivos = avanzarObjetivos(objetivosPrevios, ultimo.reps, plan, true);
   const avanzoAlguna = objetivos.some((o, i) => o !== null && o !== objetivosPrevios[i]);
 
   return {

@@ -245,9 +245,12 @@
  *                                     usuario prueba en el gimnasio y anota lo que usó.
  * @property {(number|null)[]} objetivos  Un objetivo por serie, en orden. `null` = esa
  *                                     serie va al fallo.
- * @property {'primera-vez'|'subir'|'seguir'|'tope'} motivo
- *                                     `tope` = llegó al techo pero no hay kilos que sumar
- *                                     (peso corporal, banda, o asistido ya sin ayuda).
+ * @property {'primera-vez'|'subir'|'seguir'|'agregar-lastre'|'tope'} motivo
+ *                                     `agregar-lastre` = llegó al techo haciéndolo a peso
+ *                                     corporal y toca empezar a cargar disco. Cuántos kilos
+ *                                     lo decide el usuario, así que `pesoKg` viene en null.
+ *                                     `tope` = asistido que ya no usa nada de ayuda: no se
+ *                                     puede bajar de cero, toca cambiar de ejercicio.
  * @property {ModoCarga} modo          Cómo hay que leer `pesoKg` en la pantalla.
  * @property {string} explicacion      Frase lista para mostrar en pantalla, en castellano.
  * @property {string} [advertencia]    Si algo de los datos estaba mal y hubo que suponer.

@@ -24,7 +24,8 @@ import { fileURLToPath } from 'node:url';
 
 import {
   sugerirCarga, redondearACargaPosible, todasAlTecho, objetivosIniciales,
-  avanzarObjetivos, redondear2, modoDeCarga, equipoDeCarga, saltoDe, describirObjetivos
+  avanzarObjetivos, redondear2, modoDeCarga, equipoDeCarga, saltoDe, describirObjetivos,
+  elTechoAplica
 } from './progresion.js';
 import { normalizarEjercicio } from './catalogo.js';
 
@@ -109,6 +110,42 @@ describe('objetivosIniciales — con qué objetivos se estrena un peso', () => {
     // Rango cortito de 8 a 9 con cuatro series: sin el tope, la tercera pediría 10.
     const objetivos = objetivosIniciales({ ...PLAN, series: 4, repsMin: 8, repsMax: 9 });
     assert.deepEqual(objetivos, [8, 9, 9, null]);
+  });
+
+  test('rango 6-8 con CINCO series: ningún objetivo inicial se pasa de 8', () => {
+    /*
+     * El caso con el que hay que tener cuidado al generalizar. La regla es
+     * objetivo_serie_n = min(piso + n - 1, techo), con la última siempre al fallo.
+     * Sin el min, la serie 4 arrancaría en 9 y la 5 en 10: dos objetivos por encima del
+     * techo del rango, en la primera sesión, antes de que el usuario haga nada.
+     */
+    const objetivos = objetivosIniciales({ ...PLAN, series: 5, repsMin: 6, repsMax: 8 });
+    assert.deepEqual(objetivos, [6, 7, 8, 8, null]);
+
+    for (const o of objetivos) {
+      if (o === null) continue;
+      assert.ok(o <= 8, 'el objetivo inicial ' + o + ' se pasa del techo del rango (8)');
+    }
+    assert.equal(objetivos[objetivos.length - 1], null, 'la última siempre va al fallo');
+  });
+
+  test('la fórmula vale para cualquier cantidad de series y cualquier rango', () => {
+    for (const series of [1, 2, 3, 4, 5, 8]) {
+      for (const [repsMin, repsMax] of [[6, 8], [1, 3], [8, 20], [10, 11]]) {
+        const plan = { ...PLAN, series, repsMin, repsMax };
+        const objetivos = objetivosIniciales(plan);
+
+        assert.equal(objetivos.length, series);
+        assert.equal(objetivos[series - 1], null, 'la última siempre al fallo');
+
+        objetivos.forEach((o, i) => {
+          if (o === null) return;
+          assert.equal(o, Math.min(repsMin + i, repsMax),
+            'serie ' + (i + 1) + ' con rango ' + repsMin + '-' + repsMax);
+          assert.ok(o >= repsMin && o <= repsMax, 'el objetivo ' + o + ' se fue del rango');
+        });
+      }
+    }
   });
 });
 
@@ -357,35 +394,146 @@ describe('los ejercicios asistidos: progresar es BAJAR la ayuda', () => {
   });
 });
 
-describe('peso corporal: no hay kilos que sumar', () => {
-  test('al llegar al techo, sostiene el número en vez de reiniciar el ciclo', () => {
-    const s = sugerirCarga([intento(0, [45, 45, 45], [45, 45, null])], PLAN_CORPORAL,
-                           ej('plancha'), reglas);
-    assert.equal(s.motivo, 'tope');
-    assert.equal(s.pesoKg, 0);
-    assert.match(s.explicacion, /no hay kilos/i);
-  });
-
-  test('mientras no llegue al techo, los objetivos avanzan igual que siempre', () => {
-    const s = sugerirCarga([intento(0, [20, 21, 30], [20, 21, null])], PLAN_CORPORAL,
+describe('sin carga que sumar y sin lastre: el techo del rango no aplica', () => {
+  /*
+   * La corrección que pidió el socio. Antes, al llegar al techo, la app congelaba los
+   * objetivos ahí: flexiones, plancha y dominadas quedaban muertas a las cuatro semanas.
+   * Ahora, cuando no hay ningún kilo que sumar, la repetición es la progresión y no tiene
+   * tope.
+   */
+  test('pasado el techo, los objetivos siguen subiendo de a uno', () => {
+    const s = sugerirCarga([intento(0, [45, 45, 50], [45, 45, null])], PLAN_CORPORAL,
                            ej('plancha'), reglas);
     assert.equal(s.motivo, 'seguir');
-    assert.deepEqual(s.objetivos, [21, 22, null]);
+    assert.deepEqual(s.objetivos, [46, 46, null], 'el techo del rango era 45 y se pasa de largo');
+  });
+
+  test('ya arrancando por encima del techo, sigue subiendo', () => {
+    const s = sugerirCarga([intento(0, [60, 60, 70], [60, 60, null])], PLAN_CORPORAL,
+                           ej('plancha'), reglas);
+    assert.deepEqual(s.objetivos, [61, 61, null]);
+  });
+
+  test('nunca devuelve el motivo "tope": ya no se congela', () => {
+    const s = sugerirCarga([intento(0, [45, 45, 45], [45, 45, null])], PLAN_CORPORAL,
+                           ej('plancha'), reglas);
+    assert.notEqual(s.motivo, 'tope');
+  });
+
+  test('diez sesiones seguidas al tope siguen avanzando, no se traban', () => {
+    let objetivos = /** @type {(number|null)[]} */ ([45, 45, null]);
+    for (let i = 0; i < 10; i++) {
+      const hizo = objetivos.map((o) => (o === null ? 99 : o));
+      const s = sugerirCarga([intento(0, hizo, objetivos)], PLAN_CORPORAL, ej('plancha'), reglas);
+      objetivos = s.objetivos;
+    }
+    assert.deepEqual(objetivos, [55, 55, null], 'diez sesiones, diez repeticiones más');
+  });
+
+  test('la serie que no llega sigue sin avanzar, igual que siempre', () => {
+    const s = sugerirCarga([intento(0, [45, 30, 50], [45, 45, null])], PLAN_CORPORAL,
+                           ej('plancha'), reglas);
+    assert.deepEqual(s.objetivos, [46, 45, null]);
+  });
+
+  test('la explicación dice por qué no hay tope', () => {
+    const s = sugerirCarga([intento(0, [45, 45, 50], [45, 45, null])], PLAN_CORPORAL,
+                           ej('plancha'), reglas);
+    assert.match(s.explicacion, /no tienen tope/i);
+  });
+
+  test('el peso se queda en cero: no hay nada que cargar', () => {
+    const s = sugerirCarga([intento(0, [45, 45, 50], [45, 45, null])], PLAN_CORPORAL,
+                           ej('plancha'), reglas);
+    assert.equal(s.pesoKg, 0);
+  });
+
+  test('avanzarObjetivos sin techo no respeta el repsMax del plan', () => {
+    assert.deepEqual(avanzarObjetivos([10, 10, null], [10, 10, 10], PLAN, false), [11, 11, null]);
+    assert.deepEqual(avanzarObjetivos([10, 10, null], [10, 10, 10], PLAN, true), [10, 10, null]);
+  });
+
+  test('con banda elástica pasa lo mismo que con peso corporal', () => {
+    const conBanda = { ...ej('plancha'), esPesoCorporal: false, equipo: 'banda' };
+    const s = sugerirCarga([intento(0, [45, 45, 50], [45, 45, null])], PLAN_CORPORAL, conBanda, reglas);
+    assert.equal(s.motivo, 'seguir');
+    assert.deepEqual(s.objetivos, [46, 46, null]);
   });
 });
 
-describe('lastre: el número son los kilos agregados', () => {
-  test('sube de a los escalones del lastre, no los de la barra', () => {
-    const plan = { ...PLAN, ejercicioId: 'dominadas' };
-    const s = sugerirCarga([intento(5, [10, 10, 10], [10, 10, null])], plan, ej('dominadas'), reglas);
-    assert.equal(s.motivo, 'subir');
-    assert.equal(s.pesoKg, 6.25, 'el lastre salta de a 1,25 kg');
+describe('elTechoAplica — dónde el techo del rango tiene sentido', () => {
+  test('no aplica en peso corporal puro', () => {
+    assert.equal(elTechoAplica(ej('plancha'), reglas.equipos['peso-corporal']), false);
   });
 
-  test('desde cero lastre también puede subir', () => {
-    const plan = { ...PLAN, ejercicioId: 'dominadas' };
-    const s = sugerirCarga([intento(0, [10, 10, 10], [10, 10, null])], plan, ej('dominadas'), reglas);
-    assert.equal(s.pesoKg, 1.25);
+  test('no aplica con banda, que no se mide en kilos', () => {
+    assert.equal(elTechoAplica(ej('plancha'), reglas.equipos['banda']), false);
+  });
+
+  test('sí aplica en cualquier cosa con kilos', () => {
+    assert.equal(elTechoAplica(ej('press-banca'), reglas.equipos['barra']), true);
+    assert.equal(elTechoAplica(ej('dominadas'), reglas.equipos['lastre']), true);
+    assert.equal(elTechoAplica(ej('dominadas-asistidas'), reglas.equipos['asistencia']), true);
+  });
+});
+
+describe('sin carga pero CON lastre: al llegar al techo, se agrega disco', () => {
+  const PLAN_LASTRE = { ...PLAN, ejercicioId: 'dominadas' };
+
+  test('a peso corporal y al techo, la app manda a agregar lastre', () => {
+    const s = sugerirCarga([intento(0, [10, 10, 10], [10, 10, null])], PLAN_LASTRE,
+                           ej('dominadas'), reglas);
+    assert.equal(s.motivo, 'agregar-lastre');
+  });
+
+  test('los objetivos vuelven al piso del rango', () => {
+    const s = sugerirCarga([intento(0, [10, 10, 10], [10, 10, null])], PLAN_LASTRE,
+                           ej('dominadas'), reglas);
+    assert.deepEqual(s.objetivos, [6, 7, null]);
+  });
+
+  test('la app NO elige cuántos kilos: eso lo carga el usuario', () => {
+    const s = sugerirCarga([intento(0, [10, 10, 10], [10, 10, null])], PLAN_LASTRE,
+                           ej('dominadas'), reglas);
+    assert.equal(s.pesoKg, null, 'depende de qué discos haya y de la persona');
+    assert.match(s.explicacion, /agregá lastre/i);
+    assert.match(s.explicacion, /anotá cuántos kilos/i);
+  });
+
+  test('acá el techo SÍ aplica: los objetivos no se pasan de largo', () => {
+    const s = sugerirCarga([intento(0, [9, 9, 10], [9, 9, null])], PLAN_LASTRE,
+                           ej('dominadas'), reglas);
+    assert.equal(s.motivo, 'seguir');
+    assert.deepEqual(s.objetivos, [10, 10, null], 'frenan en el techo, que es 10');
+  });
+
+  test('una vez que hay lastre puesto, sube solo de a un escalón', () => {
+    const s = sugerirCarga([intento(5, [10, 10, 10], [10, 10, null])], PLAN_LASTRE,
+                           ej('dominadas'), reglas);
+    assert.equal(s.motivo, 'subir');
+    assert.equal(s.pesoKg, 6.25, 'el lastre salta de a 1,25 kg');
+    assert.deepEqual(s.objetivos, [6, 7, null]);
+  });
+
+  test('el ciclo entero: peso corporal → primer disco → progresión con carga', () => {
+    // Al techo sin lastre: la app pide que agregue disco.
+    const estrena = sugerirCarga([intento(0, [10, 10, 10], [10, 10, null])], PLAN_LASTRE,
+                                 ej('dominadas'), reglas);
+    assert.equal(estrena.motivo, 'agregar-lastre');
+    assert.equal(estrena.pesoKg, null);
+
+    // El usuario decide 2,5 kg y entrena una sesión con esos objetivos.
+    const conDisco = sugerirCarga([intento(2.5, [6, 7, 9], estrena.objetivos)], PLAN_LASTRE,
+                                  ej('dominadas'), reglas);
+    assert.equal(conDisco.motivo, 'seguir');
+    assert.equal(conDisco.pesoKg, 2.5);
+    assert.deepEqual(conDisco.objetivos, [7, 8, null]);
+
+    // Y desde ahí sube sola, sin volver a preguntar.
+    const sube = sugerirCarga([intento(2.5, [10, 10, 10], [10, 10, null])], PLAN_LASTRE,
+                              ej('dominadas'), reglas);
+    assert.equal(sube.motivo, 'subir');
+    assert.equal(sube.pesoKg, 3.75);
   });
 });
 

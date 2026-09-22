@@ -159,6 +159,15 @@ ejercicio, hay uno por serie, y cada uno avanza por su cuenta.
 
 5. **El peso nunca baja solo.** No hay deload automático.
 
+6. **Si no hay ninguna carga que sumar, el techo del rango no aplica** y los objetivos
+   siguen subiendo sin límite. Ver [Los ejercicios sin kilos](#los-ejercicios-sin-kilos-flexiones-plancha-dominadas).
+
+> **Los objetivos iniciales tienen tope.** La fórmula del punto 2, generalizada, es
+> `objetivo_serie_n = min(piso + n − 1, techo)`, y la última siempre al fallo. El `min`
+> importa cuando hay muchas series y el rango es corto: con rango 6-8 y cinco series los
+> objetivos son **6, 7, 8, 8, fallo**, y no 6, 7, 8, 9, 10, que pedirían desde la primera
+> sesión dos números por encima del techo.
+
 ### Cómo se ve en ocho semanas
 
 Rango 6-10, tres series, barra que sube de a 2,5 kg:
@@ -189,13 +198,31 @@ app le pregunte nada.
 **La última al fallo da el margen de arriba.** Es la serie que dice cuánto le sobra de
 verdad, sin que tenga que estimarlo.
 
-### Lo que la regla NO cubre
+### Los ejercicios sin kilos: flexiones, plancha, dominadas
 
-En los ejercicios **sin kilos** —peso corporal puro, banda elástica— llegar al techo del
-rango no puede subir nada, porque no hay qué sumar. Ahí la app deja los objetivos en el
-techo y lo dice en pantalla. Es una consecuencia de la regla, no un error: si el socio
-quiere que esos ejercicios sigan progresando, hay que definirle una salida (más
-repeticiones, otra banda, una variante más difícil).
+En estos ejercicios llegar al techo del rango no puede sumar carga, porque no hay carga que
+sumar. **El techo del rango no aplica igual para todos**, y lo que decide es la casilla
+`admite_lastre`:
+
+| `admite_lastre` | Qué pasa al llegar al techo en todas las series |
+|---|---|
+| `si` | La app manda a **agregar lastre** y los objetivos vuelven al piso del rango. **Cuántos kilos lo elige el usuario**, igual que la primera vez: depende de qué discos haya y de la persona. De ahí en adelante ya es una progresión con carga normal, y sube sola de a un escalón de lastre. |
+| `no` | **El techo del rango deja de aplicar.** Los objetivos siguen subiendo de a una repetición por serie, sin límite superior. |
+
+> **Por qué el techo no puede aplicar cuando no hay lastre.** Un principiante llega al techo
+> del rango en unas cuatro semanas. Si en ese momento la app le congela los objetivos, le
+> está diciendo que en flexiones, plancha o dominadas no va a progresar nunca más. Eso no es
+> una regla de entrenamiento, es un ejercicio muerto. Cuando no hay kilos, la repetición es
+> la progresión, y una progresión con techo no es una progresión.
+
+En el código esto se decide en una sola función, `elTechoAplica`, y de ahí sale todo: si hay
+carga que sumar, el techo aplica y el ciclo se reinicia; si no la hay, los objetivos suben
+sin tope.
+
+**El caso que queda sin salida es el asistido a cero ayuda.** Ahí el usuario ya está
+haciendo el ejercicio completo sin nada de ayuda y no se puede bajar de cero, así que la app
+le dice que pase a la versión sin asistencia — que es una salida de verdad, y está en la
+columna `sustitutos`.
 
 ### El peso de arranque lo elige el usuario
 

@@ -139,6 +139,23 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
   }
 
   /**
+   * Por qué el campo del peso está vacío.
+   *
+   * Hay dos motivos distintos y conviene no confundirlos: o es la primera vez con este
+   * ejercicio, o venía haciéndolo a peso corporal, llegó al techo del rango y ahora le
+   * toca empezar a cargar disco. En los dos casos la app deja que elija el usuario, pero
+   * lo que tiene que hacer no es lo mismo.
+   * @returns {string}
+   */
+  function motivoDelCampoVacio() {
+    const s = sugerenciaActual();
+    if (s && s.motivo === 'agregar-lastre') {
+      return 'Llegaste al techo con tu propio peso. Agregá lastre y anotá cuántos kilos pusiste.';
+    }
+    return 'Primera vez con este ejercicio: probá un peso y anotá el que hayas usado.';
+  }
+
+  /**
    * Deja el peso y las repeticiones ya cargados, para que el usuario solo confirme.
    *
    * El peso: la primera serie del ejercicio trae lo que sugiere la progresión; las
@@ -383,9 +400,7 @@ export function crearPantallaSesion({ contenedor, catalogo, temporizador, guarda
         <button type="button" class="mas-menos grande" data-accion="paso" data-campo="peso" data-delta="1"
                 aria-label="Subir peso">+</button>
       </div>
-      ${sinPesoTodavia
-        ? '<p class="nota-lado">Primera vez con este ejercicio: probá un peso y anotá el que hayas usado.</p>'
-        : ''}
+      ${sinPesoTodavia ? '<p class="nota-lado">' + escapar(motivoDelCampoVacio()) + '</p>' : ''}
       <div class="separador"></div>`;
 
     return `
