@@ -28,7 +28,7 @@ import { icono } from './iconos.js';
  * si lo que estás mirando en el teléfono es la versión nueva o una vieja que quedó
  * guardada, y se pierde media hora discutiendo si un cambio se aplicó o no.
  */
-const VERSION = 'v7';
+const VERSION = 'v8';
 
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
 

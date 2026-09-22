@@ -206,8 +206,14 @@ button:disabled { opacity: 0.3; }
  *
  * El dato de la derecha pasó de "3 × 8-12" a los objetivos reales ("9 · 10 · al fallo"),
  * que ocupa más del doble. A 360 px de ancho eso dejaba al nombre sin lugar y lo partía en
- * tres renglones. Con `flex-wrap`, cuando no entra, el dato baja solo a su propia línea y
- * queda alineado a la derecha; en una pantalla más ancha sigue al lado del nombre.
+ * tres renglones.
+ *
+ * La solución es `flex-wrap`: cuando el nombre y el dato no entran juntos, el dato baja
+ * solo a su propia línea, alineado a la derecha. El dato nunca se parte —va en una línea
+ * siempre, con `nowrap`—, así que lo único que puede bajar es él entero.
+ *
+ * Las filas que sí entran quedan en un renglón. Eso depende de la base del nombre: ver el
+ * comentario de `.fila-nombre`.
  */
 .fila-ejercicio {
   display: flex;
@@ -227,8 +233,18 @@ button:disabled { opacity: 0.3; }
   color: var(--texto-4);
   min-width: 22px;
 }
-/* El 55% es el umbral del salto de línea: si al dato no le quedan 45%, se va abajo. */
-.fila-nombre { flex: 1 1 55%; min-width: 0; font-size: 16px; font-weight: 600; }
+/*
+ * `auto` es lo que hace que el salto de línea dependa del nombre de verdad.
+ *
+ * Flexbox decide el corte con el tamaño que pide cada ítem, y con una base en porcentaje
+ * el nombre "pedía" siempre lo mismo midiera lo que midiera: el corte no lo miraba nunca
+ * y todas las filas terminaban partidas, también las cortas. Con `auto` pide lo que ocupa
+ * su texto, así que las que entran quedan en un renglón.
+ *
+ * El `min-width: 0` es para cuando el nombre solo ya es más ancho que la fila: sin eso no
+ * podría achicarse por debajo de su palabra más larga y desbordaría la tarjeta.
+ */
+.fila-nombre { flex: 1 1 auto; min-width: 0; font-size: 16px; font-weight: 600; }
 .fila-dato {
   /* Alineado a la derecha tanto al lado del nombre como cuando baja a su propia línea. */
   margin-left: auto;
