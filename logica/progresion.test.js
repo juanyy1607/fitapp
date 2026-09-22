@@ -616,13 +616,13 @@ describe('describirObjetivos — cómo se cuenta en pantalla', () => {
 });
 
 describe('objetivosEnLinea — la versión corta, para la lista de Hoy', () => {
-  test('separa con puntos medios y nombra la del fallo', () => {
-    assert.equal(objetivosEnLinea([8, 9, null]), '8 · 9 · al fallo');
+  test('separa con puntos medios y abrevia la del fallo con F', () => {
+    assert.equal(objetivosEnLinea([8, 9, null]), '8 · 9 · F');
   });
 
   test('aguanta cualquier cantidad de series', () => {
-    assert.equal(objetivosEnLinea([6, 7, 8, 8, null]), '6 · 7 · 8 · 8 · al fallo');
-    assert.equal(objetivosEnLinea([null]), 'al fallo');
+    assert.equal(objetivosEnLinea([6, 7, 8, 8, null]), '6 · 7 · 8 · 8 · F');
+    assert.equal(objetivosEnLinea([null]), 'F');
   });
 
   /*
@@ -632,7 +632,7 @@ describe('objetivosEnLinea — la versión corta, para la lista de Hoy', () => {
    */
   test('lo que muestra Hoy sale de sugerirCarga, igual que la pantalla de sesión', () => {
     const s = sugerirCarga([intento(40, [7, 8, 10], [7, 8, null])], PLAN, ej('press-banca'), reglas);
-    assert.equal(objetivosEnLinea(s.objetivos), '8 · 9 · al fallo');
+    assert.equal(objetivosEnLinea(s.objetivos), '8 · 9 · F');
   });
 });
 

@@ -28,7 +28,7 @@ import { icono } from './iconos.js';
  * si lo que estás mirando en el teléfono es la versión nueva o una vieja que quedó
  * guardada, y se pierde media hora discutiendo si un cambio se aplicó o no.
  */
-const VERSION = 'v8';
+const VERSION = 'v9';
 
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
 
@@ -186,7 +186,11 @@ function duracionEstimadaMin(/** @type {import('./tipos.js').DiaRutina} */ dia) 
  * a separar.
  *
  * La primera vez con un ejercicio no hay objetivos que valga la pena adelantar: el peso
- * todavía no existe y el ciclo no arrancó. Ahí se muestra el rango del plan y se aclara.
+ * todavía no existe y el ciclo no arrancó. Ahí va el rango del plan, a secas.
+ *
+ * Todo esto es deliberadamente corto —"9 · 10 · F", "8-12"— porque tiene que entrar al
+ * lado del nombre del ejercicio. Escrito entero no entraba, y cada fila de la lista se
+ * partía en dos renglones.
  *
  * @param {import('./tipos.js').EjercicioPlanificado} p
  * @returns {string}
@@ -196,7 +200,7 @@ function objetivosDelPlan(p) {
   if (!e) return p.series + (p.series === 1 ? ' serie' : ' series');
 
   const s = sugerirCarga(intentosDeEjercicio(sesiones, p.ejercicioId), p, e, catalogo.reglas);
-  if (s.motivo === 'primera-vez') return p.repsMin + '-' + p.repsMax + ' · primera vez';
+  if (s.motivo === 'primera-vez') return p.repsMin + '-' + p.repsMax;
   return objetivosEnLinea(s.objetivos);
 }
 
@@ -221,15 +225,28 @@ function dibujarHoy() {
   const dia = rutina.dias[siguiente];
   const abierta = sesionEnCurso(sesiones);
 
+  const datos = dia.ejercicios.map(objetivosDelPlan);
+
   const filas = dia.ejercicios.map((p, i) => {
     const e = catalogo.ejercicioPorId.get(p.ejercicioId);
     return `
       <div class="fila-ejercicio">
         <span class="fila-numero">${dosDigitos(i + 1)}</span>
         <span class="fila-nombre">${escapar(e ? e.nombre : p.ejercicioId)}</span>
-        <span class="fila-dato">${escapar(objetivosDelPlan(p))}</span>
+        <span class="fila-dato">${escapar(datos[i])}</span>
       </div>`;
   }).join('');
+
+  /*
+   * La referencia de la "F", una sola vez arriba de la lista y no en cada fila.
+   *
+   * Solo si hay alguna F en pantalla. El día uno son todos ejercicios nuevos y la lista
+   * muestra rangos, así que explicar una letra que no está en ningún lado sería ruido
+   * justo en la primera pantalla que ve el usuario.
+   */
+  const referencia = datos.some((d) => d.endsWith('F'))
+    ? '<p class="referencia-lista">F = última serie al fallo</p>'
+    : '';
 
   const otros = rutina.dias
     .map((d, i) => ({ d, i }))
@@ -253,7 +270,8 @@ function dibujarHoy() {
       <button type="button" class="boton-cta" data-retomar="1" style="margin-bottom:24px">Seguir donde estaba</button>
     ` : ''}
 
-    <div class="tarjeta" style="margin-top:24px">${filas}</div>
+    ${referencia}
+    <div class="tarjeta" style="margin-top:${referencia ? '0' : '24px'}">${filas}</div>
 
     <div class="barra-inferior">
       <button type="button" class="boton-cta" data-dia="${escapar(dia.id)}">Empezar entrenamiento</button>

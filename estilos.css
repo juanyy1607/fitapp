@@ -202,6 +202,20 @@ button:disabled { opacity: 0.3; }
 }
 
 /*
+ * La referencia de la "F" de la lista.
+ *
+ * Va alineada a la derecha a propósito: es la columna que explica, y así se lee como un
+ * encabezado de esa columna y no como una nota suelta. Lo más apagado de la paleta, porque
+ * se lee una vez en la vida y después estorba.
+ */
+.referencia-lista {
+  margin: 20px 0 6px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--texto-4);
+}
+
+/*
  * Una fila por ejercicio: número, nombre, y qué le va a pedir la app.
  *
  * El dato de la derecha pasó de "3 × 8-12" a los objetivos reales ("9 · 10 · al fallo"),

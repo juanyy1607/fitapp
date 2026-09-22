@@ -273,16 +273,21 @@ export function describirObjetivos(objetivos) {
 
 /**
  * Los objetivos en una línea corta, para una lista.
- * Ejemplo: "8 · 9 · al fallo".
+ * Ejemplo: "8 · 9 · F".
  *
  * Es la versión compacta de `describirObjetivos`, que arma una frase. Vive acá al lado, y
  * no en la pantalla que la usa, justamente porque el problema que resuelve es que dos
  * pantallas cuenten lo mismo de dos formas distintas.
+ *
+ * La serie al fallo va como "F" y no como "al fallo" por una razón de ancho: escrito
+ * entero, el dato no entraba al lado del nombre del ejercicio y partía todas las filas de
+ * la lista en dos renglones. La "F" necesita una referencia arriba de la lista, que la
+ * pone la pantalla una sola vez.
  * @param {(number|null)[]} objetivos
  * @returns {string}
  */
 export function objetivosEnLinea(objetivos) {
-  return objetivos.map((o) => (o === null ? 'al fallo' : String(o))).join(' · ');
+  return objetivos.map((o) => (o === null ? 'F' : String(o))).join(' · ');
 }
 
 /**
