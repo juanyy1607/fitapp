@@ -10,8 +10,9 @@ import { cargarCatalogo, descansoDe, descansoDespuesDe } from './logica/catalogo
 import { listarSesiones, guardarSesion, guardarAjuste, leerAjuste } from './logica/almacen.js';
 import {
   sesionEnCurso, sesionesTerminadas, resumenSesion,
-  sesionCompleta, esRecord, semanaEntrenada
+  sesionCompleta, esRecord, semanaEntrenada, intentosDeEjercicio
 } from './logica/historial.js';
+import { sugerirCarga, objetivosEnLinea } from './logica/progresion.js';
 import { asegurarPersistencia } from './logica/respaldo.js';
 import { crearTemporizador } from './logica/temporizador.js';
 import { crearPantallaSesion } from './pantallas/sesion.js';
@@ -27,7 +28,7 @@ import { icono } from './iconos.js';
  * si lo que estás mirando en el teléfono es la versión nueva o una vieja que quedó
  * guardada, y se pierde media hora discutiendo si un cambio se aplicó o no.
  */
-const VERSION = 'v6';
+const VERSION = 'v7';
 
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
 
@@ -174,6 +175,31 @@ function duracionEstimadaMin(/** @type {import('./tipos.js').DiaRutina} */ dia) 
   return Math.round(total / 60 / 5) * 5;
 }
 
+/**
+ * Qué le va a pedir la app en este ejercicio la próxima vez, en una línea.
+ *
+ * Sale de `sugerirCarga`, la MISMA función que usa la pantalla de sesión. Esto no es un
+ * detalle de implementación: antes acá se mostraba "3 × 8-12", que era el modelo viejo de
+ * tres series iguales contra un rango, mientras el motor ya trabajaba con un objetivo por
+ * serie. Las dos pantallas decían cosas distintas del mismo ejercicio, y la que el usuario
+ * ve primero era la que estaba mal. Calculándolo con la misma función no se pueden volver
+ * a separar.
+ *
+ * La primera vez con un ejercicio no hay objetivos que valga la pena adelantar: el peso
+ * todavía no existe y el ciclo no arrancó. Ahí se muestra el rango del plan y se aclara.
+ *
+ * @param {import('./tipos.js').EjercicioPlanificado} p
+ * @returns {string}
+ */
+function objetivosDelPlan(p) {
+  const e = catalogo.ejercicioPorId.get(p.ejercicioId);
+  if (!e) return p.series + (p.series === 1 ? ' serie' : ' series');
+
+  const s = sugerirCarga(intentosDeEjercicio(sesiones, p.ejercicioId), p, e, catalogo.reglas);
+  if (s.motivo === 'primera-vez') return p.repsMin + '-' + p.repsMax + ' · primera vez';
+  return objetivosEnLinea(s.objetivos);
+}
+
 function dibujarHoy() {
   const terminadas = sesionesTerminadas(sesiones);
 
@@ -201,7 +227,7 @@ function dibujarHoy() {
       <div class="fila-ejercicio">
         <span class="fila-numero">${dosDigitos(i + 1)}</span>
         <span class="fila-nombre">${escapar(e ? e.nombre : p.ejercicioId)}</span>
-        <span class="fila-dato">${p.series} × ${p.repsMin}-${p.repsMax}</span>
+        <span class="fila-dato">${escapar(objetivosDelPlan(p))}</span>
       </div>`;
   }).join('');
 

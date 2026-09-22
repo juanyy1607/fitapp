@@ -24,8 +24,8 @@ import { fileURLToPath } from 'node:url';
 
 import {
   sugerirCarga, redondearACargaPosible, todasAlTecho, objetivosIniciales,
-  avanzarObjetivos, redondear2, modoDeCarga, equipoDeCarga, saltoDe, describirObjetivos,
-  elTechoAplica
+  avanzarObjetivos, redondear2, modoDeCarga, equipoDeCarga, saltoDe,
+  describirObjetivos, objetivosEnLinea, elTechoAplica
 } from './progresion.js';
 import { normalizarEjercicio } from './catalogo.js';
 
@@ -41,7 +41,7 @@ const reglas = JSON.parse(readFileSync(join(RAIZ, 'datos/reglas.json'), 'utf8'))
 /*
  * Los tests usan su propio catálogo, no el del socio.
  *
- * datos/ejercicios.json tiene los 184 ejercicios reales y lo maneja el socio: si los tests
+ * datos/ejercicios.json tiene el catálogo real y lo maneja el socio: si los tests
  * dependieran de él, renombrar un ejercicio en la planilla rompería la suite de progresión,
  * que no tiene nada que ver. Peor todavía, alguien podría "arreglar" el test cambiando los
  * datos del socio.
@@ -612,6 +612,27 @@ describe('describirObjetivos — cómo se cuenta en pantalla', () => {
 
   test('todas al fallo', () => {
     assert.equal(describirObjetivos([null]), 'al fallo');
+  });
+});
+
+describe('objetivosEnLinea — la versión corta, para la lista de Hoy', () => {
+  test('separa con puntos medios y nombra la del fallo', () => {
+    assert.equal(objetivosEnLinea([8, 9, null]), '8 · 9 · al fallo');
+  });
+
+  test('aguanta cualquier cantidad de series', () => {
+    assert.equal(objetivosEnLinea([6, 7, 8, 8, null]), '6 · 7 · 8 · 8 · al fallo');
+    assert.equal(objetivosEnLinea([null]), 'al fallo');
+  });
+
+  /*
+   * El punto de que esta función exista. La pantalla de Hoy mostraba "3 × 8-12", el modelo
+   * viejo de tres series iguales contra un rango, mientras el motor ya trabajaba con un
+   * objetivo por serie: las dos pantallas decían cosas distintas del mismo ejercicio.
+   */
+  test('lo que muestra Hoy sale de sugerirCarga, igual que la pantalla de sesión', () => {
+    const s = sugerirCarga([intento(40, [7, 8, 10], [7, 8, null])], PLAN, ej('press-banca'), reglas);
+    assert.equal(objetivosEnLinea(s.objetivos), '8 · 9 · al fallo');
   });
 });
 

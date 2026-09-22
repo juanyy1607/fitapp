@@ -22,7 +22,7 @@
   },
   {
     "id": "sentadilla-barra-libre-al-cajon",
-    "nombre": "Sentadilla barra libre al Cajón",
+    "nombre": "Sentadilla barra libre al cajón",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "sentadillas",
@@ -64,7 +64,7 @@
   },
   {
     "id": "sentadilla-multipower-al-banco",
-    "nombre": "Sentadilla Multipower al Banco",
+    "nombre": "Sentadilla Multipower al banco",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "sentadillas",
@@ -85,7 +85,7 @@
   },
   {
     "id": "belt-squat-con-cinturon-peso-libre",
-    "nombre": "Belt Squat con Cinturon Peso Libre",
+    "nombre": "Belt Squat con cinturón peso libre",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "sentadillas",
@@ -106,7 +106,7 @@
   },
   {
     "id": "belt-squat-maquina",
-    "nombre": "Belt squat Máquina",
+    "nombre": "Belt Squat máquina",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "sentadillas",
@@ -127,7 +127,7 @@
   },
   {
     "id": "sentadilla-belt-en-remo-punta-2-tipos",
-    "nombre": "Sentadilla Belt En Remo Punta 2 tipos",
+    "nombre": "Sentadilla Belt en remo punta 2 tipos",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "sentadillas",
@@ -148,7 +148,7 @@
   },
   {
     "id": "peso-muerto-barra",
-    "nombre": "Peso Muerto Barra",
+    "nombre": "Peso muerto barra",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "peso muerto",
@@ -169,7 +169,7 @@
   },
   {
     "id": "peso-muerto-multipower",
-    "nombre": "Peso Muerto Multipower",
+    "nombre": "Peso muerto Multipower",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "peso muerto",
@@ -190,7 +190,7 @@
   },
   {
     "id": "peso-muerto-barra-hexagonal",
-    "nombre": "Peso Muerto barra HEXAGONAL",
+    "nombre": "Peso muerto barra Hexagonal",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "peso muerto",
@@ -211,7 +211,7 @@
   },
   {
     "id": "peso-muerto-landmine",
-    "nombre": "Peso Muerto Landmine",
+    "nombre": "Peso muerto Landmine",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "peso muerto",
@@ -232,7 +232,7 @@
   },
   {
     "id": "peso-muerto-belt-machine",
-    "nombre": "Peso Muerto Belt Machine",
+    "nombre": "Peso muerto Belt Machine",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "peso muerto",
@@ -253,7 +253,7 @@
   },
   {
     "id": "peso-muerto-2-db",
-    "nombre": "Peso Muerto 2 Db",
+    "nombre": "Peso muerto 2 db",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "peso muerto",
@@ -274,7 +274,7 @@
   },
   {
     "id": "peso-muerto-rumano-barra",
-    "nombre": "Peso Muerto Rumano Barra",
+    "nombre": "Peso muerto rumano barra",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "peso muerto",
@@ -295,7 +295,7 @@
   },
   {
     "id": "peso-muerto-rumano-multipower",
-    "nombre": "Peso Muerto Rumano Multipower",
+    "nombre": "Peso muerto rumano Multipower",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "peso muerto",
@@ -316,7 +316,7 @@
   },
   {
     "id": "peso-muerto-rumano-1-pierna-barra-o-db",
-    "nombre": "Peso Muerto Rumano 1 Pierna Barra o DB",
+    "nombre": "Peso muerto rumano 1 pierna barra o Db",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "peso muerto",
@@ -337,7 +337,7 @@
   },
   {
     "id": "prensa-horizontal",
-    "nombre": "Prensa Horizontal",
+    "nombre": "Prensa horizontal",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "empujes máquina",
@@ -358,7 +358,7 @@
   },
   {
     "id": "prensa-de-pierna-declinada",
-    "nombre": "Prensa de Pierna Declinada",
+    "nombre": "Prensa de pierna declinada",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "empujes máquina",
@@ -379,7 +379,7 @@
   },
   {
     "id": "prensa-1-pierna",
-    "nombre": "Prensa 1 Pierna",
+    "nombre": "Prensa 1 pierna",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "empujes máquina",
@@ -400,7 +400,7 @@
   },
   {
     "id": "prensa-pierna-pendular",
-    "nombre": "Prensa Pierna Pendular",
+    "nombre": "Prensa pierna pendular",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "empujes máquina",
@@ -421,7 +421,7 @@
   },
   {
     "id": "prensa-de-pie",
-    "nombre": "Prensa De píe",
+    "nombre": "Prensa de píe",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "empujes máquina",
@@ -484,7 +484,7 @@
   },
   {
     "id": "jaka-pendular",
-    "nombre": "Jaka Pendular",
+    "nombre": "Jaka pendular",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "empujes máquina",
@@ -505,7 +505,7 @@
   },
   {
     "id": "jaka-sentada",
-    "nombre": "Jaka Sentada",
+    "nombre": "Jaka sentada",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "empujes máquina",
@@ -526,7 +526,7 @@
   },
   {
     "id": "extension-rodilla-maquina",
-    "nombre": "Extensión Rodilla Máquina",
+    "nombre": "Extensión rodilla máquina",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "empujes máquina",
@@ -547,7 +547,7 @@
   },
   {
     "id": "femoral-maquina-tumbado",
-    "nombre": "Femoral Máquina Tumbado",
+    "nombre": "Femoral máquina tumbado",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "femoral",
@@ -568,7 +568,7 @@
   },
   {
     "id": "femoral-maquina-sentado",
-    "nombre": "Femoral Máquina Sentado",
+    "nombre": "Femoral máquina sentado",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "femoral",
@@ -589,7 +589,7 @@
   },
   {
     "id": "femoral-de-pie-unilateral",
-    "nombre": "Femoral de Pie Unilateral",
+    "nombre": "Femoral de pie unilateral",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "femoral",
@@ -610,7 +610,7 @@
   },
   {
     "id": "soleo-gemelo-sentado",
-    "nombre": "Sóleo Gemelo Sentado",
+    "nombre": "Sóleo gemelo sentado",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "gemelos soleo",
@@ -631,7 +631,7 @@
   },
   {
     "id": "gemelo-de-pie-maquina",
-    "nombre": "Gemelo de Pie Máquina",
+    "nombre": "Gemelo de pie máquina",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "gemelos soleo",
@@ -652,7 +652,7 @@
   },
   {
     "id": "gemelo-de-pie-1-pie",
-    "nombre": "Gemelo de Pie 1 Pie",
+    "nombre": "Gemelo de pie 1 pie",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "gemelos soleo",
@@ -673,7 +673,7 @@
   },
   {
     "id": "gemelo-en-prensa",
-    "nombre": "Gemelo en Prensa",
+    "nombre": "Gemelo en prensa",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "gemelos soleo",
@@ -694,7 +694,7 @@
   },
   {
     "id": "aductores-maquina-acercar",
-    "nombre": "Aductores Máquina (acercar)",
+    "nombre": "Aductores máquina (acercar)",
     "nombre_alternativo": "",
     "grupo": "pierna",
     "sub_bloque": "aductores",
@@ -715,7 +715,7 @@
   },
   {
     "id": "hip-thrust-barra-libre",
-    "nombre": "Hip Thrust Barra Libre",
+    "nombre": "Hip Thrust barra libre",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "hip thrust",
@@ -736,7 +736,7 @@
   },
   {
     "id": "hip-thrust-multipower-banco",
-    "nombre": "Hip Thrust Multipower Banco",
+    "nombre": "Hip Thrust Multipower banco",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "hip thrust",
@@ -757,7 +757,7 @@
   },
   {
     "id": "hip-thrust-maquina-cinturon",
-    "nombre": "Hip Thrust Máquina Cinturón",
+    "nombre": "Hip Thrust máquina cinturón",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "hip thrust",
@@ -778,7 +778,7 @@
   },
   {
     "id": "hip-thrust-maquina-respaldo-dinamico",
-    "nombre": "Hip Thrust Máquina Respaldo Dinámico",
+    "nombre": "Hip Thrust máquina respaldo dinámico",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "hip thrust",
@@ -799,7 +799,7 @@
   },
   {
     "id": "hip-thrust-1-pierna-barra-corta-banco",
-    "nombre": "Hip Thrust 1 Pierna Barra Corta Banco",
+    "nombre": "Hip Thrust 1 pierna barra corta banco",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "hip thrust",
@@ -820,7 +820,7 @@
   },
   {
     "id": "patada-gluteo-en-maquina-1-pierna",
-    "nombre": "Patada Glúteo en Máquina 1 Pierna",
+    "nombre": "Patada glúteo en máquina 1 pierna",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "patadas",
@@ -841,7 +841,7 @@
   },
   {
     "id": "patada-gluteo-multipower-1-pierna-cuadrupedia",
-    "nombre": "Patada Glúteo Multipower 1 Pierna Cuadrupedia",
+    "nombre": "Patada glúteo Multipower 1 pierna cuadrupedia",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "patadas",
@@ -862,7 +862,7 @@
   },
   {
     "id": "patada-gluteo-polea-baja",
-    "nombre": "Patada Gluteo Polea Baja",
+    "nombre": "Patada glúteo polea baja",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "patadas",
@@ -883,7 +883,7 @@
   },
   {
     "id": "patada-gluteo-cuadrupedia-polea-baja",
-    "nombre": "Patada Gluteo Cuadrupedia Polea Baja",
+    "nombre": "Patada glúteo cuadrupedia polea baja",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "patadas",
@@ -904,7 +904,7 @@
   },
   {
     "id": "patada-gluteo-lateral-polea-baja",
-    "nombre": "Patada Glúteo Lateral Polea Baja",
+    "nombre": "Patada glúteo lateral polea baja",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "patadas",
@@ -925,7 +925,7 @@
   },
   {
     "id": "zancada-alterna-barra-trasn",
-    "nombre": "Zancada Alterna Barra trasn",
+    "nombre": "Zancada alterna barra trasn",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "zancadas",
@@ -946,7 +946,7 @@
   },
   {
     "id": "zancada-alterna-2-db",
-    "nombre": "Zancada Alterna 2 Db",
+    "nombre": "Zancada alterna 2 db",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "zancadas",
@@ -967,7 +967,7 @@
   },
   {
     "id": "zancada-desplazamiento-barra-o-2-db",
-    "nombre": "Zancada Desplazamiento Barra o 2 Db",
+    "nombre": "Zancada desplazamiento barra o 2 db",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "zancadas",
@@ -988,7 +988,7 @@
   },
   {
     "id": "step-al-cajon-1-pierna-material-o-sin",
-    "nombre": "Step al Cajón 1 Pierna Material o Sin",
+    "nombre": "Step al cajón 1 pierna material o sin",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "zancadas",
@@ -1009,7 +1009,7 @@
   },
   {
     "id": "zancada-bulgara-2db",
-    "nombre": "Zancada Búlgara 2DB",
+    "nombre": "Zancada Búlgara 2db",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "zancadas",
@@ -1050,29 +1050,8 @@
     "notas": ""
   },
   {
-    "id": "prensa-1-pierna-2",
-    "nombre": "Prensa 1 Pierna",
-    "nombre_alternativo": "",
-    "grupo": "glúteos",
-    "sub_bloque": "zancadas",
-    "equipo": "maquina",
-    "subir_kg": "",
-    "es_unilateral": "si",
-    "es_peso_corporal": "no",
-    "admite_asistencia": "no",
-    "admite_lastre": "",
-    "musculos_secundarios": "",
-    "nivel": "",
-    "sustitutos": "",
-    "descanso_seg": "",
-    "tecnica": "",
-    "errores_comunes": "",
-    "video": "https://youtu.be/2urncBLTAnw",
-    "notas": ""
-  },
-  {
     "id": "banco-lumbares-gluteos-y-lumbar",
-    "nombre": "Banco lumbares Glúteos y Lumbar",
+    "nombre": "Banco lumbares glúteos y lumbar",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "otros",
@@ -1093,7 +1072,7 @@
   },
   {
     "id": "apertura-gluteo-supino-banda-o-mini-band",
-    "nombre": "Apertura Glúteo Supino Banda o Mini band",
+    "nombre": "Apertura glúteo supino banda o Mini band",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "otros",
@@ -1114,7 +1093,7 @@
   },
   {
     "id": "abductores-maquina-separar",
-    "nombre": "Abductores Máquina (separar)",
+    "nombre": "Abductores máquina (separar)",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "otros",
@@ -1135,7 +1114,7 @@
   },
   {
     "id": "pull-through-polea-baja-cuerda",
-    "nombre": "Pull Through Polea Baja Cuerda",
+    "nombre": "Pull Through polea baja cuerda",
     "nombre_alternativo": "",
     "grupo": "glúteos",
     "sub_bloque": "otros",
@@ -1156,7 +1135,7 @@
   },
   {
     "id": "dominada-libre-en-barra",
-    "nombre": "Dominada Libre en Barra",
+    "nombre": "Dominada libre en barra",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "peso corporal",
@@ -1165,7 +1144,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "si",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -1177,7 +1156,7 @@
   },
   {
     "id": "dominadas-asistidas-en-maquina",
-    "nombre": "Dominadas Asistidas en Máquina",
+    "nombre": "Dominadas asistidas en máquina",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "peso corporal",
@@ -1186,10 +1165,10 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "si",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
-    "sustitutos": "",
+    "sustitutos": "dominada-libre-en-barra",
     "descanso_seg": "",
     "tecnica": "",
     "errores_comunes": "",
@@ -1198,7 +1177,7 @@
   },
   {
     "id": "dominada-asistida-neutro-agarre",
-    "nombre": "Dominada Asistida Neutro Agarre",
+    "nombre": "Dominada asistida neutro agarre",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "peso corporal",
@@ -1207,10 +1186,10 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "si",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
-    "sustitutos": "",
+    "sustitutos": "dominada-libre-en-barra",
     "descanso_seg": "",
     "tecnica": "",
     "errores_comunes": "",
@@ -1219,7 +1198,7 @@
   },
   {
     "id": "remo-invertido-barra-baja-prono",
-    "nombre": "Remo Invertido Barra Baja. Prono",
+    "nombre": "Remo invertido barra baja. prono",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "peso corporal",
@@ -1240,7 +1219,7 @@
   },
   {
     "id": "remo-invertido-barra-baja-supino",
-    "nombre": "Remo Invertido Barra Baja Supino",
+    "nombre": "Remo invertido barra baja supino",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "peso corporal",
@@ -1261,7 +1240,7 @@
   },
   {
     "id": "remo-barra-libre-prono",
-    "nombre": "Remo Barra Libre Prono",
+    "nombre": "Remo barra libre prono",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "remo con carga",
@@ -1282,7 +1261,7 @@
   },
   {
     "id": "remo-multipower-barra-prono",
-    "nombre": "Remo Multipower Barra Prono",
+    "nombre": "Remo Multipower barra prono",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "remo con carga",
@@ -1303,7 +1282,7 @@
   },
   {
     "id": "remo-multipower-agarre-supino",
-    "nombre": "Remo Multipower agarre Supino",
+    "nombre": "Remo Multipower agarre supino",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "remo con carga",
@@ -1324,7 +1303,7 @@
   },
   {
     "id": "remo-2-db-banco-inclinado",
-    "nombre": "Remo 2 Db Banco Inclinado",
+    "nombre": "Remo 2 db banco inclinado",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "remo con carga",
@@ -1345,7 +1324,7 @@
   },
   {
     "id": "remo-1-mano-1-db",
-    "nombre": "Remo 1 Mano 1 Db",
+    "nombre": "Remo 1 mano 1 db",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "remo con carga",
@@ -1366,7 +1345,7 @@
   },
   {
     "id": "remo-1-mano-polea-baja-de-pie",
-    "nombre": "Remo 1 Mano Polea Baja de Pie",
+    "nombre": "Remo 1 mano polea baja de pie",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea media baja",
@@ -1387,7 +1366,7 @@
   },
   {
     "id": "remo-horizontal-1-mano-polea-banco",
-    "nombre": "Remo Horizontal 1 Mano Polea Banco",
+    "nombre": "Remo horizontal 1 mano polea banco",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea media baja",
@@ -1408,7 +1387,7 @@
   },
   {
     "id": "remo-gironda-agarre-cerrado",
-    "nombre": "Remo Gironda Agarre Cerrado",
+    "nombre": "Remo Gironda agarre cerrado",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea media baja",
@@ -1429,7 +1408,7 @@
   },
   {
     "id": "remo-gironda-agarre-abierto",
-    "nombre": "Remo Gironda Agarre Abierto",
+    "nombre": "Remo Gironda agarre abierto",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea media baja",
@@ -1450,7 +1429,7 @@
   },
   {
     "id": "remo-gironda-agarre-invertido-barra",
-    "nombre": "Remo Gironda Agarre Invertido Barra",
+    "nombre": "Remo Gironda agarre invertido barra",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea media baja",
@@ -1471,7 +1450,7 @@
   },
   {
     "id": "remo-gironda-1-mano",
-    "nombre": "Remo Gironda 1 Mano",
+    "nombre": "Remo Gironda 1 mano",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea media baja",
@@ -1492,7 +1471,7 @@
   },
   {
     "id": "polea-alta-jalon-al-pecho-barra",
-    "nombre": "Polea Alta Jalón al Pecho Barra",
+    "nombre": "Polea alta jalón al pecho barra",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea alta",
@@ -1513,7 +1492,7 @@
   },
   {
     "id": "polea-alta-jalon-al-pecho-invertido-barra",
-    "nombre": "Polea Alta Jalón al Pecho Invertido Barra",
+    "nombre": "Polea alta jalón al pecho invertido barra",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea alta",
@@ -1534,7 +1513,7 @@
   },
   {
     "id": "polea-alta-jalon-al-pecho-cerrado",
-    "nombre": "Polea Alta  Jalón al Pecho Cerrado",
+    "nombre": "Polea alta jalón al pecho cerrado",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea alta",
@@ -1555,7 +1534,7 @@
   },
   {
     "id": "polea-alta-jalon-1-mano-al-pecho",
-    "nombre": "Polea Alta Jalón 1 Mano al Pecho",
+    "nombre": "Polea alta jalón 1 mano al pecho",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea alta",
@@ -1576,7 +1555,7 @@
   },
   {
     "id": "pull-over-polea-alta-barra",
-    "nombre": "Pull Over Polea Alta BARRA",
+    "nombre": "Pull Over polea alta barra",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea alta",
@@ -1597,7 +1576,7 @@
   },
   {
     "id": "pull-over-polea-alta-cuerda",
-    "nombre": "Pull Over Polea Alta CUERDA",
+    "nombre": "Pull Over polea alta cuerda",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "polea alta",
@@ -1618,7 +1597,7 @@
   },
   {
     "id": "remo-en-punta-maquina",
-    "nombre": "Remo en Punta Máquina",
+    "nombre": "Remo en punta máquina",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "máquinas",
@@ -1639,7 +1618,7 @@
   },
   {
     "id": "remo-horizontal-maquina-bilat",
-    "nombre": "Remo Horizontal Máquina Bilat",
+    "nombre": "Remo horizontal máquina bilat",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "máquinas",
@@ -1660,7 +1639,7 @@
   },
   {
     "id": "remo-horizontal-1-mano-maquina",
-    "nombre": "Remo Horizontal 1 Mano Máquina",
+    "nombre": "Remo horizontal 1 mano máquina",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "máquinas",
@@ -1681,7 +1660,7 @@
   },
   {
     "id": "remo-horizontal-maquina-bilateral",
-    "nombre": "Remo Horizontal Maquina Bilateral",
+    "nombre": "Remo horizontal máquina bilateral",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "máquinas",
@@ -1702,7 +1681,7 @@
   },
   {
     "id": "remo-descentende-unilateral-y-bilateral",
-    "nombre": "Remo Descentende Unilateral y Bilateral",
+    "nombre": "Remo descendente unilateral y bilateral",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "máquinas",
@@ -1723,7 +1702,7 @@
   },
   {
     "id": "remo-vertical-maquina",
-    "nombre": "Remo Vertical Máquina",
+    "nombre": "Remo vertical máquina",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "máquinas",
@@ -1744,7 +1723,7 @@
   },
   {
     "id": "remo-bajo-maquina-bilateral",
-    "nombre": "Remo Bajo  Máquina Bilateral",
+    "nombre": "Remo bajo máquina bilateral",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "máquinas",
@@ -1765,7 +1744,7 @@
   },
   {
     "id": "remo-bajo-1-mano-maquina",
-    "nombre": "Remo Bajo 1 Mano Máquina",
+    "nombre": "Remo bajo 1 mano máquina",
     "nombre_alternativo": "",
     "grupo": "espalda",
     "sub_bloque": "máquinas",
@@ -1786,7 +1765,7 @@
   },
   {
     "id": "biceps-alterno-2-db-de-pie-y-sentado",
-    "nombre": "Bíceps Alterno 2 db de Pie y Sentado",
+    "nombre": "Bíceps alterno 2 db de pie y sentado",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "mancuernas",
@@ -1807,7 +1786,7 @@
   },
   {
     "id": "biceps-2-db-supino",
-    "nombre": "Bíceps 2 DB Supino",
+    "nombre": "Bíceps 2 Db supino",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "mancuernas",
@@ -1828,7 +1807,7 @@
   },
   {
     "id": "biceps-2-db-martillo-manos-juntas",
-    "nombre": "Bíceps 2 Db Martillo Manos Juntas",
+    "nombre": "Bíceps 2 db martillo manos juntas",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "mancuernas",
@@ -1849,7 +1828,7 @@
   },
   {
     "id": "superserie-biceps-supino-martillo-juntas",
-    "nombre": "Superserie Biceps Supino + Martillo juntas",
+    "nombre": "Superserie bíceps supino + martillo juntas",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "mancuernas",
@@ -1870,7 +1849,7 @@
   },
   {
     "id": "biceps-1-db-sentado-apoyo-pierna",
-    "nombre": "Bíceps 1 db Sentado Apoyo Pierna",
+    "nombre": "Bíceps 1 db sentado apoyo pierna",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "mancuernas",
@@ -1891,7 +1870,7 @@
   },
   {
     "id": "biceps-predicador-1-mano-db",
-    "nombre": "Biceps Predicador 1 Mano Db",
+    "nombre": "Bíceps predicador 1 mano db",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "mancuernas",
@@ -1912,7 +1891,7 @@
   },
   {
     "id": "biceps-banco-inclinado-2-db",
-    "nombre": "Bíceps Banco Inclinado 2 db",
+    "nombre": "Bíceps banco inclinado 2 db",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "mancuernas",
@@ -1933,7 +1912,7 @@
   },
   {
     "id": "biceps-arana-2-db-banco-inclinado",
-    "nombre": "Bíceps Araña 2 DB Banco Inclinado",
+    "nombre": "Bíceps araña 2 Db banco inclinado",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "mancuernas",
@@ -1954,7 +1933,7 @@
   },
   {
     "id": "biceps-barra-z-de-pie",
-    "nombre": "Bíceps Barra Z de Pie",
+    "nombre": "Bíceps barra Z de pie",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "barra",
@@ -1975,7 +1954,7 @@
   },
   {
     "id": "biceps-barra-drag-curl-arrastre",
-    "nombre": "Bíceps Barra Drag Curl Arrastre",
+    "nombre": "Bíceps barra Drag Curl arrastre",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "barra",
@@ -1996,7 +1975,7 @@
   },
   {
     "id": "biceps-arana-barra-banco-inclinado",
-    "nombre": "Bíceps Araña Barra Banco Inclinado",
+    "nombre": "Bíceps araña barra banco inclinado",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "barra",
@@ -2017,7 +1996,7 @@
   },
   {
     "id": "biceps-predicador-barra-z",
-    "nombre": "Bíceps Predicador Barra Z",
+    "nombre": "Bíceps predicador barra Z",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "barra",
@@ -2038,7 +2017,7 @@
   },
   {
     "id": "biceps-arana-en-maquina",
-    "nombre": "Bíceps Araña en Máquina",
+    "nombre": "Bíceps araña en máquina",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "máquinas",
@@ -2059,7 +2038,7 @@
   },
   {
     "id": "biceps-maquina-predicador",
-    "nombre": "Bíceps Máquina Predicador",
+    "nombre": "Bíceps máquina predicador",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "máquinas",
@@ -2080,7 +2059,7 @@
   },
   {
     "id": "biceps-polea-baja-diferentes-agarres",
-    "nombre": "Bíceps Polea Baja. Diferentes agarres",
+    "nombre": "Bíceps polea baja. diferentes agarres",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "poleas",
@@ -2101,7 +2080,7 @@
   },
   {
     "id": "biceps-polea-baja-tumbado-cuerda-o-barra",
-    "nombre": "Bíceps Polea Baja Tumbado Cuerda o Barra",
+    "nombre": "Bíceps polea baja tumbado cuerda o barra",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "poleas",
@@ -2122,7 +2101,7 @@
   },
   {
     "id": "biceps-polea-baja-de-espaldas-2-poleas",
-    "nombre": "Bíceps Polea Baja de Espaldas 2 Poleas",
+    "nombre": "Bíceps polea baja de espaldas 2 poleas",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "poleas",
@@ -2143,7 +2122,7 @@
   },
   {
     "id": "biceps-arana-doble-polea-alta-de-pie",
-    "nombre": "Bíceps Araña Doble Polea Alta de Pie",
+    "nombre": "Bíceps araña doble polea alta de pie",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "poleas",
@@ -2164,7 +2143,7 @@
   },
   {
     "id": "biceps-arana-polea-baja-suelo",
-    "nombre": "Bíceps Araña Polea Baja Suelo",
+    "nombre": "Bíceps araña polea baja suelo",
     "nombre_alternativo": "",
     "grupo": "bíceps",
     "sub_bloque": "poleas",
@@ -2194,7 +2173,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -2206,7 +2185,7 @@
   },
   {
     "id": "flexion-deficit-suelo",
-    "nombre": "Flexión Déficit Suelo",
+    "nombre": "Flexión déficit suelo",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "peso corporal",
@@ -2215,7 +2194,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -2227,7 +2206,7 @@
   },
   {
     "id": "flexion-al-banco",
-    "nombre": "Flexión al Banco",
+    "nombre": "Flexión al banco",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "peso corporal",
@@ -2236,7 +2215,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -2248,7 +2227,7 @@
   },
   {
     "id": "fondos-paralelas-libres",
-    "nombre": "Fondos Paralelas Libres",
+    "nombre": "Fondos paralelas libres",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "peso corporal",
@@ -2257,7 +2236,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "si",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -2269,7 +2248,7 @@
   },
   {
     "id": "press-banca-plano-barra-libre",
-    "nombre": "Press Banca Plano Barra Libre",
+    "nombre": "Press banca plano barra libre",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "barra y mancuernas",
@@ -2290,7 +2269,7 @@
   },
   {
     "id": "press-banca-inferior-barra-libre",
-    "nombre": "Press Banca Inferior Barra libre",
+    "nombre": "Press banca inferior barra libre",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "barra y mancuernas",
@@ -2311,7 +2290,7 @@
   },
   {
     "id": "press-banca-superior-barra-libre",
-    "nombre": "Press Banca Superior Barra libre",
+    "nombre": "Press banca superior barra libre",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "barra y mancuernas",
@@ -2332,7 +2311,7 @@
   },
   {
     "id": "press-banca-plano-multipower",
-    "nombre": "Press Banca Plano Multipower",
+    "nombre": "Press banca plano Multipower",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "barra y mancuernas",
@@ -2353,7 +2332,7 @@
   },
   {
     "id": "press-banca-superior-multipower",
-    "nombre": "Press Banca Superior Multipower",
+    "nombre": "Press banca superior Multipower",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "barra y mancuernas",
@@ -2374,7 +2353,7 @@
   },
   {
     "id": "press-pectoral-plano-2-db",
-    "nombre": "Press Pectoral Plano 2 DB",
+    "nombre": "Press pectoral plano 2 Db",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "barra y mancuernas",
@@ -2395,7 +2374,7 @@
   },
   {
     "id": "press-pectoral-superior-2-db-banco",
-    "nombre": "Press Pectoral Superior 2 DB Banco",
+    "nombre": "Press pectoral superior 2 Db banco",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "barra y mancuernas",
@@ -2416,7 +2395,7 @@
   },
   {
     "id": "apertura-pectoral-2-db-banco-plano",
-    "nombre": "Apertura Pectoral 2 DB Banco Plano",
+    "nombre": "Apertura pectoral 2 Db banco plano",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "barra y mancuernas",
@@ -2437,7 +2416,7 @@
   },
   {
     "id": "aperturas-pectoral-2-db-sentado",
-    "nombre": "Aperturas Pectoral 2 DB Sentado",
+    "nombre": "Aperturas pectoral 2 Db sentado",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "barra y mancuernas",
@@ -2458,7 +2437,7 @@
   },
   {
     "id": "apertura-pectoral-maquina-sentado",
-    "nombre": "Apertura Pectoral Máquina Sentado",
+    "nombre": "Apertura pectoral máquina sentado",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "máquinas",
@@ -2479,7 +2458,7 @@
   },
   {
     "id": "apertura-pectoral-maquina-tumbado",
-    "nombre": "Apertura Pectoral Máquina Tumbado",
+    "nombre": "Apertura pectoral máquina tumbado",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "máquinas",
@@ -2500,7 +2479,7 @@
   },
   {
     "id": "maquina-press-pectoral-superior",
-    "nombre": "Máquina Press Pectoral Superior",
+    "nombre": "Máquina press pectoral superior",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "máquinas",
@@ -2521,7 +2500,7 @@
   },
   {
     "id": "maquina-press-pectoral-inferior",
-    "nombre": "Máquina Press Pectoral Inferior",
+    "nombre": "Máquina press pectoral inferior",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "máquinas",
@@ -2542,7 +2521,7 @@
   },
   {
     "id": "fondos-maquina-paralelas-asistidas",
-    "nombre": "Fondos Máquina Paralelas Asistidas",
+    "nombre": "Fondos máquina paralelas asistidas",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "máquinas",
@@ -2551,10 +2530,10 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "si",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
-    "sustitutos": "",
+    "sustitutos": "fondos-paralelas-libres",
     "descanso_seg": "",
     "tecnica": "",
     "errores_comunes": "",
@@ -2563,7 +2542,7 @@
   },
   {
     "id": "maquina-fondos-sentado-o-de-pie",
-    "nombre": "Máquina Fondos Sentado o de Pie",
+    "nombre": "Máquina fondos sentado o de pie",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "máquinas",
@@ -2572,7 +2551,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -2584,7 +2563,7 @@
   },
   {
     "id": "apertura-en-poleas-altas",
-    "nombre": "Apertura en Poleas Altas",
+    "nombre": "Apertura en poleas altas",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "máquinas",
@@ -2605,7 +2584,7 @@
   },
   {
     "id": "apertura-poleas-bajas",
-    "nombre": "Apertura Poleas Bajas",
+    "nombre": "Apertura poleas bajas",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "máquinas",
@@ -2626,7 +2605,7 @@
   },
   {
     "id": "aperturas-poleas-sentado-banco",
-    "nombre": "Aperturas Poleas Sentado Banco",
+    "nombre": "Aperturas poleas sentado banco",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "máquinas",
@@ -2647,7 +2626,7 @@
   },
   {
     "id": "apertura-pectoral-polea-alta-medio-bajo-bilateral",
-    "nombre": "Apertura Pectoral Polea Alta, Medio, Bajo Bilateral",
+    "nombre": "Apertura pectoral polea alta, medio, bajo bilateral",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "máquinas",
@@ -2668,7 +2647,7 @@
   },
   {
     "id": "apertura-pectoral-pole-alta-1-mano",
-    "nombre": "Apertura Pectoral Pole Alta 1 Mano",
+    "nombre": "Apertura pectoral polea alta 1 mano",
     "nombre_alternativo": "",
     "grupo": "pecho",
     "sub_bloque": "máquinas",
@@ -2689,7 +2668,7 @@
   },
   {
     "id": "fondos-banco",
-    "nombre": "Fondos Banco",
+    "nombre": "Fondos banco",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "peso corporal",
@@ -2698,7 +2677,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -2710,7 +2689,7 @@
   },
   {
     "id": "fondos-pies-elevados",
-    "nombre": "Fondos Pies Elevados",
+    "nombre": "Fondos pies elevados",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "peso corporal",
@@ -2719,7 +2698,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -2740,7 +2719,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -2752,7 +2731,7 @@
   },
   {
     "id": "flexion-triceps-en-banco",
-    "nombre": "Flexión Tríceps en Banco",
+    "nombre": "Flexión tríceps en banco",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "peso corporal",
@@ -2761,7 +2740,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -2773,7 +2752,7 @@
   },
   {
     "id": "flexion-triceps-en-maquina-de-dominadas",
-    "nombre": "Flexión Tríceps en Máquina de Dominadas",
+    "nombre": "Flexión tríceps en máquina de dominadas",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "peso corporal",
@@ -2782,7 +2761,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -2794,7 +2773,7 @@
   },
   {
     "id": "flexion-triceps-sobre-cabeza-en-barra",
-    "nombre": "Flexión Tríceps Sobre Cabeza en Barra",
+    "nombre": "Flexión tríceps sobre cabeza en barra",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "peso corporal",
@@ -2803,7 +2782,7 @@
     "es_unilateral": "no",
     "es_peso_corporal": "si",
     "admite_asistencia": "no",
-    "admite_lastre": "",
+    "admite_lastre": "no",
     "musculos_secundarios": "",
     "nivel": "",
     "sustitutos": "",
@@ -2815,7 +2794,7 @@
   },
   {
     "id": "triceps-frances-barra-z-banco-plano",
-    "nombre": "Tríceps Francés Barra Z Banco Plano",
+    "nombre": "Tríceps francés barra Z banco plano",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "barras y mancuernas",
@@ -2836,7 +2815,7 @@
   },
   {
     "id": "triceps-frances-2db-banco-plano",
-    "nombre": "Triceps Frances 2DB Banco Plano",
+    "nombre": "Tríceps francés 2db banco plano",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "barras y mancuernas",
@@ -2857,7 +2836,7 @@
   },
   {
     "id": "triceps-trasnuca-1-mano-1-db",
-    "nombre": "Triceps Trasnuca 1 Mano 1 Db",
+    "nombre": "Tríceps trasnuca 1 mano 1 db",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "barras y mancuernas",
@@ -2878,7 +2857,7 @@
   },
   {
     "id": "triceps-trasnuca-2-manos-1-db",
-    "nombre": "Triceps Trasnuca 2 Manos 1 Db",
+    "nombre": "Tríceps trasnuca 2 manos 1 db",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "barras y mancuernas",
@@ -2899,7 +2878,7 @@
   },
   {
     "id": "multipower-press-cerrado-plano-triceps",
-    "nombre": "Multipower Press Cerrado Plano Tríceps",
+    "nombre": "Multipower press cerrado plano tríceps",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "barras y mancuernas",
@@ -2920,7 +2899,7 @@
   },
   {
     "id": "triceps-trasnuca-multipower-sentado",
-    "nombre": "Tríceps Trasnuca Multipower Sentado",
+    "nombre": "Tríceps trasnuca Multipower sentado",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "barras y mancuernas",
@@ -2941,7 +2920,7 @@
   },
   {
     "id": "tricpes-polea-alta-a-cadera-barra",
-    "nombre": "Trícpes Polea Alta a Cadera Barra",
+    "nombre": "Tríceps polea alta a cadera barra",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "polea alta",
@@ -2962,7 +2941,7 @@
   },
   {
     "id": "triceps-polea-alta-a-cadera-cuerda",
-    "nombre": "Tríceps Polea Alta a Cadera Cuerda",
+    "nombre": "Tríceps polea alta a cadera cuerda",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "polea alta",
@@ -2983,7 +2962,7 @@
   },
   {
     "id": "triceps-1-mano-polea-alta-a-cadera",
-    "nombre": "Tríceps 1 Mano Polea Alta a Cadera",
+    "nombre": "Tríceps 1 mano polea alta a cadera",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "polea alta",
@@ -3004,7 +2983,7 @@
   },
   {
     "id": "triceps-polea-alta-1-mano-oblicuo",
-    "nombre": "Tríceps Polea Alta 1 Mano  Oblicuo",
+    "nombre": "Tríceps polea alta 1 mano oblicuo",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "polea alta",
@@ -3025,7 +3004,7 @@
   },
   {
     "id": "triceps-polea-alta-trasnuca-cuerda",
-    "nombre": "Tríceps Polea Alta Trasnuca Cuerda",
+    "nombre": "Tríceps polea alta trasnuca cuerda",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "polea alta",
@@ -3046,7 +3025,7 @@
   },
   {
     "id": "triceps-polea-alta-trasnuca-cuerda-cadera-apoyada",
-    "nombre": "Tríceps Polea Alta Trasnuca Cuerda, cadera apoyada",
+    "nombre": "Tríceps polea alta trasnuca cuerda, cadera apoyada",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "polea alta",
@@ -3067,7 +3046,7 @@
   },
   {
     "id": "triceps-poleas-altas-cuzadas-a-cadera",
-    "nombre": "Tríceps Poleas Altas Cuzadas a Cadera",
+    "nombre": "Tríceps poleas altas cruzadas a cadera",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "polea alta",
@@ -3088,7 +3067,7 @@
   },
   {
     "id": "triceps-polea-baja-trasnuca",
-    "nombre": "Tríceps Polea Baja Trasnuca",
+    "nombre": "Tríceps polea baja trasnuca",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "polea baja",
@@ -3109,7 +3088,7 @@
   },
   {
     "id": "triceps-polea-baja-1-mano-trasnuca",
-    "nombre": "Triceps Polea Baja  1 Mano Trasnuca",
+    "nombre": "Tríceps polea baja 1 mano trasnuca",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "polea baja",
@@ -3130,7 +3109,7 @@
   },
   {
     "id": "triceps-frances-polea-baja-banco",
-    "nombre": "Tríceps Frances Polea Baja Banco",
+    "nombre": "Tríceps francés polea baja banco",
     "nombre_alternativo": "",
     "grupo": "tríceps",
     "sub_bloque": "polea baja",
@@ -3150,50 +3129,8 @@
     "notas": ""
   },
   {
-    "id": "triceps-polea-alta-a-cadera-cuerda-2",
-    "nombre": "Tríceps Polea Alta a Cadera Cuerda",
-    "nombre_alternativo": "",
-    "grupo": "tríceps",
-    "sub_bloque": "polea baja",
-    "equipo": "polea",
-    "subir_kg": "",
-    "es_unilateral": "no",
-    "es_peso_corporal": "no",
-    "admite_asistencia": "no",
-    "admite_lastre": "",
-    "musculos_secundarios": "",
-    "nivel": "",
-    "sustitutos": "",
-    "descanso_seg": "",
-    "tecnica": "",
-    "errores_comunes": "",
-    "video": "https://youtu.be/BSnh8Sk6VPw",
-    "notas": ""
-  },
-  {
-    "id": "fondos-banco-2",
-    "nombre": "Fondos banco",
-    "nombre_alternativo": "",
-    "grupo": "tríceps",
-    "sub_bloque": "polea baja",
-    "equipo": "peso-corporal",
-    "subir_kg": "",
-    "es_unilateral": "no",
-    "es_peso_corporal": "si",
-    "admite_asistencia": "no",
-    "admite_lastre": "",
-    "musculos_secundarios": "",
-    "nivel": "",
-    "sustitutos": "",
-    "descanso_seg": "",
-    "tecnica": "",
-    "errores_comunes": "",
-    "video": "https://youtu.be/GFsACbNJAAY",
-    "notas": ""
-  },
-  {
     "id": "press-hombro-con-barra-libre-de-pie",
-    "nombre": "Press Hombro con Barra Libre de Pie",
+    "nombre": "Press hombro con barra libre de pie",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "press hombros",
@@ -3214,7 +3151,7 @@
   },
   {
     "id": "press-hombro-barra-sentado",
-    "nombre": "Press Hombro Barra Sentado",
+    "nombre": "Press hombro barra sentado",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "press hombros",
@@ -3235,7 +3172,7 @@
   },
   {
     "id": "press-hombro-multipower-de-pie",
-    "nombre": "Press Hombro Multipower de Pie",
+    "nombre": "Press hombro Multipower de pie",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "press hombros",
@@ -3256,7 +3193,7 @@
   },
   {
     "id": "press-hombro-multipower-banco",
-    "nombre": "Press Hombro Multipower Banco",
+    "nombre": "Press hombro Multipower banco",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "press hombros",
@@ -3277,7 +3214,7 @@
   },
   {
     "id": "press-hombros-2db-banco-sentado",
-    "nombre": "Press Hombros 2DB  Banco Sentado",
+    "nombre": "Press hombros 2db banco sentado",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "press hombros",
@@ -3298,7 +3235,7 @@
   },
   {
     "id": "press-hombro-1-mano-1-db-banco-sentado",
-    "nombre": "Press Hombro 1 Mano 1 DB Banco Sentado",
+    "nombre": "Press hombro 1 mano 1 Db banco sentado",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "press hombros",
@@ -3319,7 +3256,7 @@
   },
   {
     "id": "press-hombro-landmine-remo-punta",
-    "nombre": "Press Hombro LANDMINE Remo Punta",
+    "nombre": "Press hombro Landmine remo punta",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "press hombros",
@@ -3340,7 +3277,7 @@
   },
   {
     "id": "maquina-press-hombro",
-    "nombre": "Máquina Press Hombro",
+    "nombre": "Máquina press hombro",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "press hombros",
@@ -3361,7 +3298,7 @@
   },
   {
     "id": "maquina-press-hombro-abierto-cerrado",
-    "nombre": "Máquina Press Hombro Abierto / Cerrado",
+    "nombre": "Máquina press hombro abierto / cerrado",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "press hombros",
@@ -3382,7 +3319,7 @@
   },
   {
     "id": "remo-al-menton-2-db-de-pie",
-    "nombre": "Remo al Mentón 2 db de Pie",
+    "nombre": "Remo al mentón 2 db de pie",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "remo menton",
@@ -3403,7 +3340,7 @@
   },
   {
     "id": "remo-al-menton-barra-z",
-    "nombre": "Remo al Mentón Barra Z",
+    "nombre": "Remo al mentón barra Z",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "remo menton",
@@ -3424,7 +3361,7 @@
   },
   {
     "id": "remo-al-menton-multipower-agarre-cerrado",
-    "nombre": "Remo al Mentón Multipower Agarre Cerrado",
+    "nombre": "Remo al mentón Multipower agarre cerrado",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "remo menton",
@@ -3445,7 +3382,7 @@
   },
   {
     "id": "remo-al-menton-multipower-agarre-abierto",
-    "nombre": "Remo al Mentón Multipower Agarre Abierto",
+    "nombre": "Remo al mentón Multipower agarre abierto",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "remo menton",
@@ -3466,7 +3403,7 @@
   },
   {
     "id": "remo-al-menton-polea-baja-cuerda",
-    "nombre": "Remo al Mentón Polea Baja Cuerda",
+    "nombre": "Remo al mentón polea baja cuerda",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "remo menton",
@@ -3487,7 +3424,7 @@
   },
   {
     "id": "remo-al-menton-polea-baja-barra",
-    "nombre": "Remo al Mentón Polea Baja Barra",
+    "nombre": "Remo al mentón polea baja barra",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "remo menton",
@@ -3508,7 +3445,7 @@
   },
   {
     "id": "remo-al-menton-polea-baja-tumbado-cuerda-o-barra",
-    "nombre": "Remo al Mentón Polea Baja Tumbado Cuerda o Barra",
+    "nombre": "Remo al mentón polea baja tumbado cuerda o barra",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "remo menton",
@@ -3529,7 +3466,7 @@
   },
   {
     "id": "elevaciones-laterales-2db",
-    "nombre": "Elevaciones Laterales  2db",
+    "nombre": "Elevaciones laterales 2db",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "elevaciones",
@@ -3550,7 +3487,7 @@
   },
   {
     "id": "elevaciones-laterales-2-db-sentado-en-banco",
-    "nombre": "Elevaciones Laterales 2 db Sentado en banco",
+    "nombre": "Elevaciones laterales 2 db sentado en banco",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "elevaciones",
@@ -3571,7 +3508,7 @@
   },
   {
     "id": "elevaciones-laterales-alternas-2-db-sentado",
-    "nombre": "Elevaciones Laterales Alternas 2 db Sentado",
+    "nombre": "Elevaciones laterales alternas 2 db sentado",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "elevaciones",
@@ -3592,7 +3529,7 @@
   },
   {
     "id": "polea-baja-unilateral-hombro",
-    "nombre": "Polea Baja Unilateral Hombro",
+    "nombre": "Polea baja unilateral hombro",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "elevaciones",
@@ -3613,7 +3550,7 @@
   },
   {
     "id": "cruces-hombros-polea-baja-de-pie",
-    "nombre": "Cruces Hombros Polea Baja de Pie",
+    "nombre": "Cruces hombros polea baja de pie",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "elevaciones",
@@ -3634,7 +3571,7 @@
   },
   {
     "id": "cruces-hombros-polea-tumbado-suelo",
-    "nombre": "Cruces Hombros Polea Tumbado Suelo",
+    "nombre": "Cruces hombros polea tumbado suelo",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "elevaciones",
@@ -3655,7 +3592,7 @@
   },
   {
     "id": "maquina-elevacion-hombro-bilateral",
-    "nombre": "Máquina Elevación Hombro Bilateral",
+    "nombre": "Máquina elevación hombro bilateral",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "elevaciones",
@@ -3676,7 +3613,7 @@
   },
   {
     "id": "polea-baja-elevacion-frontal-cuerda",
-    "nombre": "Polea Baja Elevación Frontal Cuerda",
+    "nombre": "Polea baja elevación frontal cuerda",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "elevaciones",
@@ -3697,7 +3634,7 @@
   },
   {
     "id": "polea-baja-tumbado-elevacion-hombros-cuerda-o-barra",
-    "nombre": "Polea Baja Tumbado Elevación Hombros Cuerda o Barra",
+    "nombre": "Polea baja tumbado elevación hombros cuerda o barra",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "elevaciones",
@@ -3718,7 +3655,7 @@
   },
   {
     "id": "elevacion-frontal-con-disco",
-    "nombre": "Elevación Frontal con DISCO",
+    "nombre": "Elevación frontal con disco",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "elevaciones",
@@ -3739,7 +3676,7 @@
   },
   {
     "id": "apertura-hombros-posterior-maquina",
-    "nombre": "Apertura Hombros Posterior Máquina",
+    "nombre": "Apertura hombros posterior máquina",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "posterior",
@@ -3760,7 +3697,7 @@
   },
   {
     "id": "apertura-hombros-posterior-poleas-media",
-    "nombre": "Apertura Hombros Posterior Poleas Media",
+    "nombre": "Apertura hombros posterior poleas media",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "posterior",
@@ -3781,7 +3718,7 @@
   },
   {
     "id": "face-pull-polea-baja-cuerdas",
-    "nombre": "Face Pull Polea BAJA Cuerdas",
+    "nombre": "Face Pull polea baja cuerdas",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "posterior",
@@ -3802,7 +3739,7 @@
   },
   {
     "id": "face-pull-polea-alta-cuerdas",
-    "nombre": "Face Pull Polea ALTA Cuerdas",
+    "nombre": "Face Pull polea alta cuerdas",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "posterior",
@@ -3823,7 +3760,7 @@
   },
   {
     "id": "apertura-hombros-2-db-banco-inclinado",
-    "nombre": "Apertura Hombros 2 db Banco Inclinado",
+    "nombre": "Apertura hombros 2 db banco inclinado",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "posterior",
@@ -3844,7 +3781,7 @@
   },
   {
     "id": "face-pull-polea-cuerda-alto-medio-bajo",
-    "nombre": "Face Pull Polea Cuerda Alto, Medio, Bajo",
+    "nombre": "Face Pull polea cuerda alto, medio, bajo",
     "nombre_alternativo": "",
     "grupo": "hombro",
     "sub_bloque": "posterior",

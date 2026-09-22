@@ -272,6 +272,20 @@ export function describirObjetivos(objetivos) {
 }
 
 /**
+ * Los objetivos en una línea corta, para una lista.
+ * Ejemplo: "8 · 9 · al fallo".
+ *
+ * Es la versión compacta de `describirObjetivos`, que arma una frase. Vive acá al lado, y
+ * no en la pantalla que la usa, justamente porque el problema que resuelve es que dos
+ * pantallas cuenten lo mismo de dos formas distintas.
+ * @param {(number|null)[]} objetivos
+ * @returns {string}
+ */
+export function objetivosEnLinea(objetivos) {
+  return objetivos.map((o) => (o === null ? 'al fallo' : String(o))).join(' · ');
+}
+
+/**
  * La función principal: con qué peso y con qué objetivos encarar el próximo ejercicio.
  *
  * @param {IntentoEjercicio[]} historial  Del más reciente al más viejo. Vacío = primera vez.

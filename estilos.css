@@ -153,6 +153,26 @@ button:disabled { opacity: 0.3; }
   font-weight: 700;
 }
 
+/*
+ * El "Listo" mientras todavía falta cargar el peso.
+ *
+ * Antes heredaba el `opacity: 0.3` de `button:disabled` y quedaba un amarillo lavado. Eso
+ * se lee como un botón roto, no como uno que está esperando un dato. En gris se entiende
+ * solo: todavía no es el momento de apretarlo.
+ *
+ * Y va en contra de la regla 1 de este archivo: el amarillo significa "esto pasó, o esto
+ * es lo que sigue". Un botón que no se puede apretar no es ninguna de las dos.
+ *
+ * Solo cambian los colores. El alto, el ancho, el padding y el grosor del borde son los
+ * mismos que habilitado, así que el botón no se mueve ni cambia de tamaño al habilitarse.
+ */
+.boton-principal:disabled {
+  opacity: 1;
+  background: var(--control);
+  border-color: var(--linea);
+  color: var(--texto-3);
+}
+
 .boton-cta {
   width: 100%;
   min-height: 58px;
@@ -181,8 +201,17 @@ button:disabled { opacity: 0.3; }
   overflow: hidden;
 }
 
+/*
+ * Una fila por ejercicio: número, nombre, y qué le va a pedir la app.
+ *
+ * El dato de la derecha pasó de "3 × 8-12" a los objetivos reales ("9 · 10 · al fallo"),
+ * que ocupa más del doble. A 360 px de ancho eso dejaba al nombre sin lugar y lo partía en
+ * tres renglones. Con `flex-wrap`, cuando no entra, el dato baja solo a su propia línea y
+ * queda alineado a la derecha; en una pantalla más ancha sigue al lado del nombre.
+ */
 .fila-ejercicio {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
   padding: 16px 18px;
@@ -198,8 +227,11 @@ button:disabled { opacity: 0.3; }
   color: var(--texto-4);
   min-width: 22px;
 }
-.fila-nombre { flex: 1; font-size: 16px; font-weight: 600; }
+/* El 55% es el umbral del salto de línea: si al dato no le quedan 45%, se va abajo. */
+.fila-nombre { flex: 1 1 55%; min-width: 0; font-size: 16px; font-weight: 600; }
 .fila-dato {
+  /* Alineado a la derecha tanto al lado del nombre como cuando baja a su propia línea. */
+  margin-left: auto;
   font-family: "Chivo Mono", ui-monospace, Menlo, monospace;
   font-variant-numeric: tabular-nums;
   font-size: 13px;
